@@ -149,17 +149,23 @@ async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl Res
         Ok(x) => x,
         Err(e) => {
             return match e {
+                RepositoryError::SqlError { source: sqlx::Error::RowNotFound } => {
+                    HttpResponse::NotFound().json(ErrorResponse {
+                        status: "error".into(),
+                        reason: "Unable to find data origin requested".into(),
+                    })
+                }
                 RepositoryError::SqlError { source } => {
                     error!("Database error: {}", source);
                     HttpResponse::InternalServerError().json(ErrorResponse {
                         status: "error".into(),
                         reason: "Invalid database connection error".into(),
                     })
-                }
+                },
                 RepositoryError::NoRecordsFound =>
-                    HttpResponse::BadRequest().json(ErrorResponse {
+                    HttpResponse::NotFound().json(ErrorResponse {
                         status: "error".into(),
-                        reason: "Unable to find timestamp requested".into(),
+                        reason: "Unable to find data origin requested".into(),
                     })
             }
         }
@@ -190,7 +196,7 @@ async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db:
                     })
                 }
                 RepositoryError::NoRecordsFound =>
-                    HttpResponse::BadRequest().json(ErrorResponse {
+                    HttpResponse::NotFound().json(ErrorResponse {
                         status: "error".into(),
                         reason: "Unable to find timestamp requested".into(),
                     })

@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:13
+    ports:
+      - "54320:5432"
+    environment:
+      POSTGRES_DB: domfin_coingecko
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: development_only
+
+volumes:
+  logvolume01: {}

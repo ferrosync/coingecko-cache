@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="BranchesTreeState">
+    <expand>
+      <path>
+        <item name="ROOT" type="e8cecc67:BranchNodeDescriptor" />
+        <item name="LOCAL_ROOT" type="e8cecc67:BranchNodeDescriptor" />
+      </path>
+    </expand>
+    <select />
+  </component>
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+    <generated />
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="CargoProjects">
+    <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="6a330c8f-f829-47a3-b73e-e3c18fa72841" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Rust File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="75uvv6lx" />
+  </component>
+  <component name="ProjectId" id="1k1xDSblADMZxOP2xxWL9UcE9hF" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="cf.first.check.clang-format" value="false" />
+    <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/service" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Cargo.Run">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Build (debug)" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="build" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Build (release)" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="build --release" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Expand domfin_coingecko_cache::repo" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="expand --bin domfin-coingecko-cache --color=always --theme=GitHub --tests repo" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Run" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="channel" value="DEFAULT" />
+      <option name="command" value="run" />
+      <option name="allFeatures" value="false" />
+      <option name="emulateTerminal" value="false" />
+      <option name="backtrace" value="SHORT" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs>
+        <env name="RUST_LOG" value="info" />
+      </envs>
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="docker-compose.yml.db: Compose Deployment" type="docker-deploy" factoryName="docker-compose.yml" temporary="true" server-name="Docker">
+      <deployment type="docker-compose.yml">
+        <settings>
+          <option name="services">
+            <list>
+              <option value="db" />
+            </list>
+          </option>
+          <option name="sourceFilePath" value="docker-compose.yml" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Cargo.Run" />
+      <item itemvalue="Cargo.Build (debug)" />
+      <item itemvalue="Cargo.Build (release)" />
+      <item itemvalue="Docker.docker-compose.yml.db: Compose Deployment" />
+      <item itemvalue="Cargo.Expand domfin_coingecko_cache::repo" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Cargo.Expand domfin_coingecko_cache::repo" />
+        <item itemvalue="Docker.docker-compose.yml.db: Compose Deployment" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="RustProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="version" value="2" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6a330c8f-f829-47a3-b73e-e3c18fa72841" name="Default Changelist" comment="" />
+      <created>1604881778972</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1604881778972</updated>
+      <workItem from="1604881780192" duration="2836000" />
+      <workItem from="1604936748226" duration="30249000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.env" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="555" y="196" width="800" height="719" key="#Plugins" timestamp="1605068175576">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="555" y="196" width="800" height="719" key="#Plugins/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605068175576" />
+    <state x="623" y="324" width="1084" height="756" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1605075084521">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="623" y="324" width="1084" height="756" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605075084521" />
+    <state x="673" y="352" width="564" height="406" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1604944760320">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="673" y="352" width="564" height="406" key="#com.intellij.fileTypes.FileTypeChooser/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1604944760320" />
+    <state x="768" y="271" width="374" height="569" key="#com.intellij.ide.util.MemberChooser" timestamp="1605071146348">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="768" y="271" width="374" height="569" key="#com.intellij.ide.util.MemberChooser/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605071146348" />
+    <state width="1874" height="341" key="GridCell.Tab.0.bottom" timestamp="1605089038401">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.0.bottom/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038401" />
+    <state width="1874" height="341" key="GridCell.Tab.0.center" timestamp="1605089038401">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.0.center/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038401" />
+    <state width="1874" height="341" key="GridCell.Tab.0.left" timestamp="1605089038401">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.0.left/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038401" />
+    <state width="1874" height="341" key="GridCell.Tab.0.right" timestamp="1605089038401">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.0.right/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038401" />
+    <state width="1874" height="341" key="GridCell.Tab.1.bottom" timestamp="1605089038332">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.1.bottom/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038332" />
+    <state width="1874" height="341" key="GridCell.Tab.1.center" timestamp="1605089038332">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.1.center/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038332" />
+    <state width="1874" height="341" key="GridCell.Tab.1.left" timestamp="1605089038332">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.1.left/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038332" />
+    <state width="1874" height="341" key="GridCell.Tab.1.right" timestamp="1605089038332">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state width="1874" height="341" key="GridCell.Tab.1.right/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089038332" />
+    <state x="100" y="124" width="1720" height="856" key="com.intellij.history.integration.ui.views.SelectionHistoryDialog" timestamp="1605089072644">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="100" y="124" width="1720" height="856" key="com.intellij.history.integration.ui.views.SelectionHistoryDialog/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605089072644" />
+    <state x="623" y="257" width="672" height="678" key="search.everywhere.popup" timestamp="1605068170693">
+      <screen x="0" y="24" width="1920" height="1056" />
+    </state>
+    <state x="623" y="257" width="672" height="678" key="search.everywhere.popup/0.24.1920.1056/1920.0.1920.1080@0.24.1920.1056" timestamp="1605068170693" />
+  </component>
+</project>

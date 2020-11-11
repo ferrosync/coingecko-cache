@@ -1,11 +1,10 @@
 
-create table raw_response (
-    id bigint primary key generated always as identity,
+create table data_origin (
+    uuid uuid primary key,
+    agent text not null,
     timestamp_utc timestamp not null,
-    status_code smallint,
-    status_text text,
-    body text,
-    headers jsonb
+    data text not null,
+    metadata text[][]
 );
 
 create table coin (
@@ -14,9 +13,16 @@ create table coin (
 );
 
 create table coin_dominance (
+    id bigint primary key generated always as identity,
+    data_origin_uuid uuid not null references data_origin(uuid),
     timestamp_utc timestamp not null,
-    coin_id text not null references coin(id),
-    market_cap_usd numeric(21, 21) check (market_cap_usd >= 0),
-    market_dominance_percentage numeric(21, 21) check (market_dominance_percentage >= 0 and market_dominance_percentage <= 100),
-    primary key (timestamp_utc, coin_id)
-)
+    imported_at_utc timestamp not null default (now() at time zone 'utc'),
+    agent text not null,
+    coin_id text not null,
+    coin_name text not null,
+    market_cap_usd numeric not null check (market_cap_usd >= 0),
+    market_dominance_percentage numeric not null check (market_dominance_percentage >= 0 and market_dominance_percentage <= 100),
+    unique (agent, timestamp_utc, coin_id)
+);
+
+create index on coin_dominance(timestamp_utc);

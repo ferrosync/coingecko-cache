@@ -93,12 +93,12 @@ struct CoinDominanceMeta {
 }
 
 impl CoinDominanceMeta {
-    fn from_repo(requested_timestamp: DateTime<Utc>, data: OriginMetadata) -> CoinDominanceMeta {
+    fn from_repo(data: OriginMetadata) -> CoinDominanceMeta {
         Self {
             origin: data.origin_uuid,
             imported_at_timestamp: data.imported_at_utc,
-            requested_timestamp,
-            actual_timestamp: data.timestamp_utc,
+            requested_timestamp: data.requested_timestamp_utc,
+            actual_timestamp: data.actual_timestamp_utc,
         }
     }
 }
@@ -177,8 +177,7 @@ async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl Res
 #[get("/api/v0/coingecko/coin_dominance")]
 async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db: web::Data<PgPool>) -> impl Responder {
     let ts = query.timestamp
-        .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc))
-        .unwrap_or(Utc::now());
+        .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc));
 
     let result =
         repo::CoinDominanceRepo::find_by_timestamp_rounded(ts, db.get_ref())
@@ -208,8 +207,8 @@ async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db:
         data: data.elements.into_iter()
             .map(|x| CoinDominanceElement::from_repo(x))
             .collect(),
-        timestamp: data.meta.timestamp_utc,
-        meta: CoinDominanceMeta::from_repo(ts, data.meta),
+        timestamp: data.meta.actual_timestamp_utc,
+        meta: CoinDominanceMeta::from_repo(data.meta),
     };
 
     HttpResponse::Ok().json(response)

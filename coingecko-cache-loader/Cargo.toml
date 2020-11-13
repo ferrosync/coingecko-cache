@@ -9,8 +9,9 @@ edition = "2018"
 [dependencies]
 sqlx = { version = "0.3", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "runtime-tokio", "macros" ] }
 reqwest = { version = "0.10", features = ["json"] }
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "0.2", features = ["full", "time"] }
 futures = "0.3"
+rand = "0.7"
 
 dotenv = "0.15.0"
 log = "0.4"
@@ -20,6 +21,7 @@ bytes = "0.5"
 bigdecimal = { version = "0.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
+leaky-bucket = "0.8"
 
 serde = "1.0"
 serde_json = "1.0"

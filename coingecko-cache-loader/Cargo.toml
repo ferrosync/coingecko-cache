@@ -10,13 +10,14 @@ edition = "2018"
 sqlx = { version = "0.3", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "runtime-tokio", "macros" ] }
 reqwest = { version = "0.10", features = ["json"] }
 tokio = { version = "0.2", features = ["full"] }
+futures = "0.3"
 
 dotenv = "0.15.0"
 log = "0.4"
 pretty_env_logger = "0.4"
 
 bytes = "0.5"
-bigdecimal = { version = "0.2", features = ["serde"] }
+bigdecimal = { version = "0.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 

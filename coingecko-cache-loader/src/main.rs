@@ -7,6 +7,7 @@ use chrono::Utc;
 use reqwest::header::HeaderMap;
 use dotenv::dotenv;
 use serde::{Serialize, Deserialize};
+use futures::future::try_join_all;
 
 use crate::model::CoinDominanceResponse;
 use std::error::Error;
@@ -15,7 +16,7 @@ mod model {
     use chrono::{DateTime, Utc};
     use chrono::serde::{ts_seconds};
     use serde::Deserialize;
-    use bigdecimal::BigDecimal;
+    use sqlx::types::BigDecimal;
 
     #[derive(Deserialize, Debug)]
     pub struct CoinDominanceResponse {
@@ -91,6 +92,29 @@ async fn insert_snapshot(
         meta)
         .execute(&mut tx)
         .await?;
+
+    for coin in json.data.iter() {
+        sqlx::query!(r#"
+        insert into coin_dominance (
+            data_origin_uuid,
+            agent,
+            timestamp_utc,
+            coin_id,
+            coin_name,
+            market_cap_usd,
+            market_dominance_percentage
+        )
+        values ($1, $2, $3, $4, $5, $6, $7)
+        "#,
+        uuid,
+        "loader_rust",
+        json.timestamp.naive_utc(),
+        coin.id,
+        coin.name,
+        coin.market_cap_usd,
+        coin.dominance_percentage)
+        .execute(&mut tx).await?;
+    }
 
     tx.commit().await?;
     Ok(())

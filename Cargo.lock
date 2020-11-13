@@ -411,6 +411,7 @@ dependencies = [
  "num-bigint 0.2.6",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -580,10 +581,11 @@ dependencies = [
 name = "coingecko-cache-loader"
 version = "0.1.0"
 dependencies = [
- "bigdecimal 0.2.0",
+ "bigdecimal 0.1.2",
  "bytes",
  "chrono",
  "dotenv",
+ "futures",
  "log",
  "pretty_env_logger",
  "reqwest",

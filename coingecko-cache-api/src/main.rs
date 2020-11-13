@@ -1,4 +1,5 @@
 mod repo;
+mod base64;
 
 #[macro_use]
 extern crate log;
@@ -119,12 +120,15 @@ struct ErrorResponse {
     reason: String,
 }
 
+#[serde_as]
 #[derive(Serialize)]
 struct DataOriginResponse {
     pub uuid: Uuid,
     pub agent: String,
     pub imported_at: DateTime<Utc>,
-    pub data: String,
+
+    #[serde_as(as = "crate::base64::Base64")]
+    pub data: Vec<u8>,
 }
 
 impl DataOriginResponse {

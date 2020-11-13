@@ -44,8 +44,8 @@ pub struct DataOrigin {
     pub uuid: Uuid,
     pub agent: String,
     pub timestamp_utc: DateTime<Utc>,
-    pub data: String,
-    pub metadata: Option<Vec<String>>,
+    pub data: Vec<u8>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 impl DataOriginRepo {
@@ -150,29 +150,32 @@ impl CoinDominanceRepo {
         };
 
         let mut cursor =
-                sqlx::query!(r#"
-                    select
-                        data.id,
-                        data.data_origin_uuid,
-                        data.timestamp_utc,
-                        data.imported_at_utc,
-                        data.agent,
-                        data.coin_id,
-                        data.coin_name,
-                        data.market_cap_usd,
-                        data.market_dominance_percentage
-                    from
-                        coin_dominance as data
-                    where
-                        data.timestamp_utc = $1
-                        and data.agent = $2
-                    order by
-                        case when ((data.coin_id <> '') is not true) then 1 else 0 end,
-                        data.market_cap_usd desc
-                    "#,
-                    timestamp_agent.timestamp.naive_utc(),
-                    timestamp_agent.agent)
-                    .fetch(pool);
+            sqlx::query!(r#"
+                select
+                    data.id,
+                    data.data_origin_uuid,
+                    data.timestamp_utc,
+                    data.imported_at_utc,
+                    data.agent,
+                    data.coin_id,
+                    data.coin_name,
+                    data.market_cap_usd,
+                    data.market_dominance_percentage
+                from
+                    coin_dominance as data
+                where
+                    data.timestamp_utc = $1
+                    and data.agent = $2
+                order by
+                    -- note: force pushing the "others" to the bottom of the list
+                    case when ((data.coin_id <> '') is not true) then 1 else 0 end,
+
+                    -- then sort by market cap descending
+                    data.market_cap_usd desc
+                "#,
+                timestamp_agent.timestamp.naive_utc(),
+                timestamp_agent.agent)
+                .fetch(pool);
 
         let mut elements = Vec::new();
         let meta = if let Some(x) = cursor.try_next().await.context(SqlError)? {

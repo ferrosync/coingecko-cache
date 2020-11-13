@@ -1,23 +1,2 @@
-[package]
-name = "domfin-coingecko-cache"
-version = "0.1.0"
-authors = ["Josh Bowden <josh@ferrosync.io>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-actix-web = "3"
-dotenv = "0.15.0"
-sqlx = { version = "0.3", default-features = false, features = [ "postgres", "bigdecimal", "chrono", "uuid", "runtime-tokio", "macros" ] }
-serde = "1.0"
-serde_json = { version = "1.0", features = ["raw_value"] }
-serde_with = "1.5"
-log = "0.4"
-chrono = { version = "0.4", features = ["serde"] }
-listenfd = "0.3"
-bigdecimal = { version = "0.2", features = ["serde"] }
-pretty_env_logger = "0.4"
-snafu = "0.6"
-futures = "0.3"
-uuid = { version = "0.8", features = ["serde", "v4"] }
+[workspace]
+members = ["coingecko-cache-api", "coingecko-cache-loader"]

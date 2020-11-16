@@ -4,8 +4,6 @@ use std::ops::Add;
 use sqlx::types::Uuid;
 use snafu::{ensure, Snafu, ResultExt};
 use sqlx::types::BigDecimal;
-use sqlx::Cursor;
-use sqlx::postgres::PgCursor;
 use std::iter::Iterator;
 use futures::prelude::*;
 
@@ -13,8 +11,9 @@ pub struct OriginMetadata {
     pub requested_timestamp_utc: DateTime<Utc>,
     pub actual_timestamp_utc: DateTime<Utc>,
     pub imported_at_utc: DateTime<Utc>,
-    pub origin_uuid: Uuid,
+    pub provenance_uuid: Uuid,
     pub agent: String,
+    pub blob_sha256: Vec<u8>,
 }
 
 pub struct CoinDominanceRecord {
@@ -33,47 +32,91 @@ pub struct FindByTimestampResult {
 pub enum RepositoryError {
     #[snafu(display("Failed to access database: {}", source))]
     SqlError { source: sqlx::Error, },
-
-    #[snafu(display("Query did not return any records"))]
-    NoRecordsFound,
 }
 
 pub struct DataOriginRepo { }
 
-pub struct DataOrigin {
+pub struct Provenance {
     pub uuid: Uuid,
     pub agent: String,
     pub timestamp_utc: DateTime<Utc>,
     pub data: Vec<u8>,
-    pub metadata: Option<serde_json::Value>,
+    pub object_id: i64,
+    pub object_sha256: Vec<u8>,
+    pub request_metadata: Option<serde_json::Value>,
+    pub response_metadata: Option<serde_json::Value>,
+}
+
+pub struct ObjectStorageRepo { }
+
+pub struct StorageBlob {
+    pub id: i64,
+    pub sha256: Vec<u8>,
+    pub data: Vec<u8>,
+    pub mime: Option<String>,
+}
+
+impl ObjectStorageRepo {
+    pub async fn get_by_sha256(hash: &[u8], pool: &PgPool) -> Result<StorageBlob, RepositoryError> {
+
+        let row = sqlx::query!(r#"
+            select
+                obj.id,
+                obj.sha256,
+                obj.data,
+                obj.mime
+            from
+                object_storage obj
+            where
+                obj.sha256 = $1
+        "#, hash)
+            .fetch_one(pool)
+            .await
+            .context(SqlError);
+
+        row.map(|x| StorageBlob {
+            id: x.id,
+            data: x.data,
+            sha256: x.sha256,
+            mime: x.mime,
+        })
+    }
 }
 
 impl DataOriginRepo {
 
-    pub async fn get_by_uuid(uuid: Uuid, pool: &PgPool) -> Result<DataOrigin, RepositoryError> {
+    pub async fn get_by_uuid(uuid: Uuid, pool: &PgPool) -> Result<Provenance, RepositoryError> {
 
         let row = sqlx::query!(r#"
             select
-                uuid,
-                agent,
-                timestamp_utc,
-                data,
-                metadata
+                data.uuid,
+                data.agent,
+                data.timestamp_utc,
+                data.object_id,
+                data.request_metadata,
+                data.response_metadata,
+                obj.data,
+                obj.sha256
             from
-                data_origin
+                provenance data
+                inner join object_storage obj
+                    on obj.id = data.object_id
             where
-                uuid = $1
+                data.uuid = $1
         "#, uuid)
             .fetch_one(pool)
             .await
             .context(SqlError);
 
-        row.map(|x| DataOrigin {
+        row.map(|x| Provenance {
             uuid: x.uuid,
             agent: x.agent,
             timestamp_utc: Utc.from_utc_datetime(&x.timestamp_utc),
+            object_id: x.object_id,
+            object_sha256: x.sha256,
             data: x.data,
-            metadata: x.metadata,
+            response_metadata: x.response_metadata,
+            request_metadata: x.request_metadata,
         })
     }
 }
@@ -152,8 +195,9 @@ impl CoinDominanceRepo {
         let mut cursor =
             sqlx::query!(r#"
                 select
-                    data.id,
-                    data.data_origin_uuid,
+                    data.provenance_uuid,
+                    obj.id,
+                    obj.sha256,
                     data.timestamp_utc,
                     data.imported_at_utc,
                     data.agent,
@@ -163,6 +207,8 @@ impl CoinDominanceRepo {
                     data.market_dominance_percentage
                 from
                     coin_dominance as data
+                    inner join object_storage obj
+                        on obj.id = data.object_id
                 where
                     data.timestamp_utc = $1
                     and data.agent = $2
@@ -189,15 +235,16 @@ impl CoinDominanceRepo {
             let actual_timestamp = Utc.from_utc_datetime(&x.timestamp_utc);
             let m = OriginMetadata {
                 requested_timestamp_utc: ts.unwrap_or(actual_timestamp),
-                origin_uuid: x.data_origin_uuid,
+                provenance_uuid: x.provenance_uuid,
                 actual_timestamp_utc: actual_timestamp,
                 imported_at_utc: Utc.from_utc_datetime(&x.imported_at_utc),
                 agent: x.agent,
+                blob_sha256: x.sha256,
             };
 
             m
         } else {
-            return NoRecordsFound.fail();
+            return Err(sqlx::Error::RowNotFound).context(SqlError);
         };
 
         while let Some(x) = cursor.try_next().await.context(SqlError)? {

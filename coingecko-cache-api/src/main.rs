@@ -26,9 +26,9 @@ use listenfd::ListenFd;
 use sqlx::PgPool;
 use sqlx::types::Uuid;
 use sqlx::types::chrono::NaiveDateTime;
-use sqlx::Cursor;
 
 use crate::repo::{OriginMetadata, FindByTimestampResult, RepositoryError};
+use actix_web::body::Body;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -79,9 +79,13 @@ impl<T> SerializeAs<T> for ToStringVerbatim
     }
 }
 
+#[serde_as]
 #[derive(Serialize)]
 struct CoinDominanceMeta {
-    origin: Uuid,
+    provenance_uuid: Uuid,
+
+    #[serde_as(as = "serde_with::hex::Hex")]
+    blob_sha256: Vec<u8>,
 
     #[serde(with = "ts_milliseconds")]
     imported_at_timestamp: DateTime<Utc>,
@@ -96,7 +100,8 @@ struct CoinDominanceMeta {
 impl CoinDominanceMeta {
     fn from_repo(data: OriginMetadata) -> CoinDominanceMeta {
         Self {
-            origin: data.origin_uuid,
+            provenance_uuid: data.provenance_uuid,
+            blob_sha256: data.blob_sha256,
             imported_at_timestamp: data.imported_at_utc,
             requested_timestamp: data.requested_timestamp_utc,
             actual_timestamp: data.actual_timestamp_utc,
@@ -122,27 +127,62 @@ struct ErrorResponse {
 
 #[serde_as]
 #[derive(Serialize)]
-struct DataOriginResponse {
+struct ProvenanceResponse {
     pub uuid: Uuid,
     pub agent: String,
     pub imported_at: DateTime<Utc>,
 
     #[serde_as(as = "crate::base64::Base64")]
     pub data: Vec<u8>,
+
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub sha256: Vec<u8>,
+
+    pub request_metadata: Option<serde_json::Value>,
+    pub response_metadata: Option<serde_json::Value>,
 }
 
-impl DataOriginResponse {
-    fn from_repo(x: repo::DataOrigin) -> DataOriginResponse {
+impl ProvenanceResponse {
+    fn from_repo(x: repo::Provenance) -> ProvenanceResponse {
         Self {
             uuid: x.uuid,
             agent: x.agent,
             imported_at: x.timestamp_utc,
             data: x.data,
+            sha256: x.object_sha256,
+            request_metadata: x.request_metadata,
+            response_metadata: x.response_metadata,
         }
     }
 }
 
-#[get("/api/v0/origin/{id}")]
+trait ToResponse {
+    type Output : Responder;
+    fn to_response(&self) -> Self::Output;
+}
+
+impl ToResponse for RepositoryError {
+    type Output = HttpResponse<Body>;
+    fn to_response(&self) -> Self::Output {
+        match self {
+            RepositoryError::SqlError { source: sqlx::Error::RowNotFound } => {
+                HttpResponse::NotFound().json(ErrorResponse {
+                    status: "error".into(),
+                    reason: "Unable to find data origin requested".into(),
+                })
+            },
+            RepositoryError::SqlError { source } => {
+                error!("Database error: {}", source);
+                HttpResponse::InternalServerError().json(ErrorResponse {
+                    status: "error".into(),
+                    reason: "Invalid database connection error".into(),
+                })
+            },
+        }
+    }
+}
+
+#[get("/api/v0/provenance/{id}")]
 async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl Responder {
 
     let result =
@@ -151,31 +191,43 @@ async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl Res
 
     let data = match result {
         Ok(x) => x,
-        Err(e) => {
-            return match e {
-                RepositoryError::SqlError { source: sqlx::Error::RowNotFound } => {
-                    HttpResponse::NotFound().json(ErrorResponse {
-                        status: "error".into(),
-                        reason: "Unable to find data origin requested".into(),
-                    })
-                }
-                RepositoryError::SqlError { source } => {
-                    error!("Database error: {}", source);
-                    HttpResponse::InternalServerError().json(ErrorResponse {
-                        status: "error".into(),
-                        reason: "Invalid database connection error".into(),
-                    })
-                },
-                RepositoryError::NoRecordsFound =>
-                    HttpResponse::NotFound().json(ErrorResponse {
-                        status: "error".into(),
-                        reason: "Unable to find data origin requested".into(),
-                    })
-            }
-        }
+        Err(e) => return e.to_response(),
     };
 
-    HttpResponse::Ok().json(DataOriginResponse::from_repo(data))
+    HttpResponse::Ok().json(ProvenanceResponse::from_repo(data))
+}
+
+#[get("/api/v0/blob/{hash}")]
+async fn get_blob(hash: web::Path<String>, db: web::Data<PgPool>) -> impl Responder {
+
+    let hex = hex::decode(hash.into_inner());
+    let hex = match hex {
+        Err(e) => return HttpResponse::BadRequest().json(ErrorResponse {
+            status: "error".into(),
+            reason: format!("Invalid SHA256 hash: {}", e),
+        }),
+        Ok(buf) => buf,
+    };
+
+    if hex.len() != 32 {
+        return HttpResponse::BadRequest().json(ErrorResponse {
+            status: "error".into(),
+            reason: "Invalid SHA256 hash: Expected length to be 32 bytes".into(),
+        })
+    }
+
+    let result =
+        repo::ObjectStorageRepo::get_by_sha256(hex.as_slice(), db.get_ref())
+            .await;
+
+    let data = match result {
+        Ok(x) => x,
+        Err(e) => return e.to_response(),
+    };
+
+    HttpResponse::Ok()
+        .content_type(data.mime.unwrap_or("application/octet-stream".into()))
+        .body(data.data)
 }
 
 #[get("/api/v0/coingecko/coin_dominance")]
@@ -189,22 +241,7 @@ async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db:
 
     let data = match result {
         Ok(x) => x,
-        Err(e) => {
-            return match e {
-                RepositoryError::SqlError { source } => {
-                    error!("Database error: {}", source);
-                    HttpResponse::InternalServerError().json(ErrorResponse {
-                        status: "error".into(),
-                        reason: "Invalid database connection error".into(),
-                    })
-                }
-                RepositoryError::NoRecordsFound =>
-                    HttpResponse::NotFound().json(ErrorResponse {
-                        status: "error".into(),
-                        reason: "Unable to find timestamp requested".into(),
-                    })
-            }
-        }
+        Err(e) => return e.to_response(),
     };
 
     let response = CoinDominanceResponse {
@@ -233,8 +270,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut listenfd = ListenFd::from_env();
 
     // Database
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
-    let db_pool = PgPool::new(&database_url).await?;
+    let database_url = env::var("DOMFI_API_DATABASE_URL").expect("DATABASE_URL is not set in .env file");
+    let db_pool = PgPool::connect(&database_url).await?;
 
     // HTTP Server
     let mut server = HttpServer::new(move || {
@@ -244,6 +281,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .service(hello)
             .service(get_coingecko_coin_dominance)
             .service(get_data_origin)
+            .service(get_blob)
             .route("/hey", web::get().to(manual_hello))
     });
 
@@ -251,8 +289,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     server = match listenfd.take_tcp_listener(0)? {
         Some(listener) => server.listen(listener)?,
         None => {
-            let host = env::var("HOST").expect("HOST is not set in .env file");
-            let port = env::var("PORT").expect("PORT is not set in .env file");
+            let host = env::var("DOMFI_API_HOST").expect("DOMFI_API_HOST is not set in .env file");
+            let port = env::var("DOMFI_API_PORT").expect("DOMFI_API_PORT is not set in .env file");
             server.bind(format!("{}:{}", host, port))?
         }
     };

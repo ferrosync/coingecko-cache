@@ -5,21 +5,18 @@ mod base64;
 extern crate log;
 
 use std::env;
-use std::str::FromStr;
 use std::error::Error;
-use std::ops::Add;
 
 use serde::{self, Serialize, Deserialize};
 use serde_with::{serde_as, SerializeAs};
-use serde_with::serde::Serializer;
 use serde_json::value::RawValue;
 
 use actix_web::middleware::Logger;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
 use sqlx::types::BigDecimal;
 use chrono::serde::{ts_milliseconds, ts_seconds};
-use chrono::{DateTime, Utc, DurationRound, SubsecRound, Timelike, Duration};
+use chrono::{DateTime, Utc};
 
 use dotenv::dotenv;
 use listenfd::ListenFd;
@@ -27,7 +24,7 @@ use sqlx::PgPool;
 use sqlx::types::Uuid;
 use sqlx::types::chrono::NaiveDateTime;
 
-use crate::repo::{OriginMetadata, FindByTimestampResult, RepositoryError};
+use crate::repo::{OriginMetadata, RepositoryError};
 use actix_web::body::Body;
 
 #[get("/")]

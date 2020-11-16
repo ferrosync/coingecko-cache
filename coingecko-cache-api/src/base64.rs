@@ -1,9 +1,7 @@
-use serde_with::{DeserializeAs, SerializeAs};
-use serde_with::formats::{Format, Lowercase, Uppercase};
-use serde::{Deserializer, Deserialize, Serializer};
 use std::borrow::Cow;
+use serde::{Deserializer, Deserialize, Serializer};
 use serde::de::Error;
-use std::marker::PhantomData;
+use serde_with::{DeserializeAs, SerializeAs};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Base64 { }

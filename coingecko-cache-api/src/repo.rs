@@ -2,9 +2,8 @@ use chrono::{DateTime, Utc, SubsecRound, Timelike, Duration, TimeZone};
 use sqlx::PgPool;
 use std::ops::Add;
 use sqlx::types::Uuid;
-use snafu::{ensure, Snafu, ResultExt};
+use snafu::{Snafu, ResultExt};
 use sqlx::types::BigDecimal;
-use std::iter::Iterator;
 use futures::prelude::*;
 
 pub struct OriginMetadata {

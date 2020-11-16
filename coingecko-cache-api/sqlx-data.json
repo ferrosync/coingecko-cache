@@ -1,0 +1,229 @@
+{
+  "db": "PostgreSQL",
+  "1f1a6d5f846eb956511678fabc74972c1f30a6db14216abbbdd7fae0074f8f47": {
+    "query": "\n            select\n                obj.id,\n                obj.sha256,\n                obj.data,\n                obj.mime\n            from\n                object_storage obj\n            where\n                obj.sha256 = $1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "sha256",
+          "type_info": "Bytea"
+        },
+        {
+          "ordinal": 2,
+          "name": "data",
+          "type_info": "Bytea"
+        },
+        {
+          "ordinal": 3,
+          "name": "mime",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bytea"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "2d2bf69241427e6cf188ecb50b6cd12930a5e909b13287512d251674a83c9ce9": {
+    "query": "\n            select\n                data.uuid,\n                data.agent,\n                data.timestamp_utc,\n                data.object_id,\n                data.request_metadata,\n                data.response_metadata,\n                obj.data,\n                obj.sha256\n            from\n                provenance data\n                inner join object_storage obj\n                    on obj.id = data.object_id\n            where\n                data.uuid = $1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "uuid",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "agent",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "timestamp_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 3,
+          "name": "object_id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 4,
+          "name": "request_metadata",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 5,
+          "name": "response_metadata",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 6,
+          "name": "data",
+          "type_info": "Bytea"
+        },
+        {
+          "ordinal": 7,
+          "name": "sha256",
+          "type_info": "Bytea"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false
+      ]
+    }
+  },
+  "799c95f656b50e52a2b551bce5a9cebf4a51afb7b36083ebf5d2a787ce4df9aa": {
+    "query": "\n            select\n                timestamp_utc, agent\n            from\n                coin_dominance\n            where\n                timestamp_utc = (\n                    select max(timestamp_utc) from coin_dominance\n                )\n            limit 1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "timestamp_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 1,
+          "name": "agent",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "a9febe7f511f21cb4ee5c120ac6c2df0d324898b6e9387225c59a5fbe91f5b53": {
+    "query": "\n            select\n                timestamp_utc, agent\n            from\n                coin_dominance\n            where\n                timestamp_utc between $1 and $2\n            order by timestamp_utc asc\n            limit 1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "timestamp_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 1,
+          "name": "agent",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamp",
+          "Timestamp"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "ccbb55df25cb37715a139eaa95a930bd3a83159d84a7624d62febac9967f0ff4": {
+    "query": "\n                select\n                    data.provenance_uuid,\n                    obj.id,\n                    obj.sha256,\n                    data.timestamp_utc,\n                    data.imported_at_utc,\n                    data.agent,\n                    data.coin_id,\n                    data.coin_name,\n                    data.market_cap_usd,\n                    data.market_dominance_percentage\n                from\n                    coin_dominance as data\n                    inner join object_storage obj\n                        on obj.id = data.object_id\n                where\n                    data.timestamp_utc = $1\n                    and data.agent = $2\n                order by\n                    -- note: force pushing the \"others\" to the bottom of the list\n                    case when ((data.coin_id <> '') is not true) then 1 else 0 end,\n\n                    -- then sort by market cap descending\n                    data.market_cap_usd desc\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "provenance_uuid",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 2,
+          "name": "sha256",
+          "type_info": "Bytea"
+        },
+        {
+          "ordinal": 3,
+          "name": "timestamp_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 4,
+          "name": "imported_at_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 5,
+          "name": "agent",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "coin_id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "coin_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "market_cap_usd",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 9,
+          "name": "market_dominance_percentage",
+          "type_info": "Numeric"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamp",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  }
+}

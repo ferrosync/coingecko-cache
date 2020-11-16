@@ -2,12 +2,15 @@
 name = "coingecko_cache_loader"
 version = "0.1.0"
 authors = ["Josh Bowden <josh@ferrosync.io>"]
+license = "MIT OR Apache-2.0"
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://github.com/ferrosync/coingecko-cache"
+repository = "https://github.com/ferrosync/coingecko-cache"
+readme = "../README.md"
 
 [dependencies]
-sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "macros", "runtime-tokio-rustls" ] }
+sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "macros", "runtime-tokio-rustls", "offline" ] }
 reqwest = { version = "0.10", default-features = false, features = ["json", "rustls-tls", "cookies", "json", "gzip", "brotli", "stream"] }
 tokio = { version = "0.2", features = ["full", "time"] }
 futures = "0.3"

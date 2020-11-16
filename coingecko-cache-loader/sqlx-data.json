@@ -1,0 +1,61 @@
+{
+  "db": "PostgreSQL",
+  "586fbcccee9f81b4734881a650c02e18c987cb4b5fa9a66b0016df685f967b4c": {
+    "query": "\n        insert into provenance (\n            uuid,\n            object_id,\n            agent,\n            timestamp_utc,\n            request_metadata,\n            response_metadata\n        )\n        values ($1, $2, $3, $4, $5, $6)\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Int8",
+          "Text",
+          "Timestamp",
+          "Jsonb",
+          "Jsonb"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "e40be38a2a77ecc64410b78bd5f77b3a48ad4cf51ded18bca43706c9c6363fff": {
+    "query": "\n        with new_obj as (\n            insert into object_storage (sha256, data, mime)\n            values ($1, $2, $3)\n            on conflict (sha256) do update\n                set mime = $3\n            returning id\n        )\n        select id from new_obj\n        union\n        select id from object_storage where sha256 = $1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Bytea",
+          "Bytea",
+          "Text"
+        ]
+      },
+      "nullable": [
+        null
+      ]
+    }
+  },
+  "e9b306601008ee93df8e9d807cdc26dfea3d155896cc89d7b85f24b3cf5c5830": {
+    "query": "\n        insert into coin_dominance (\n            provenance_uuid,\n            object_id,\n            agent,\n            timestamp_utc,\n            coin_id,\n            coin_name,\n            market_cap_usd,\n            market_dominance_percentage\n        )\n        values ($1, $2, $3, $4, $5, $6, $7, $8)\n        on conflict do nothing\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Int8",
+          "Text",
+          "Timestamp",
+          "Text",
+          "Text",
+          "Numeric",
+          "Numeric"
+        ]
+      },
+      "nullable": []
+    }
+  }
+}

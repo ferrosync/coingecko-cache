@@ -8,6 +8,7 @@ edition = "2018"
 homepage = "https://github.com/ferrosync/coingecko-cache"
 repository = "https://github.com/ferrosync/coingecko-cache"
 readme = "../README.md"
+description = "CoinGecko API poller for coin dominance and database loader for snapshots"
 
 [dependencies]
 sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "macros", "runtime-tokio-rustls", "offline" ] }

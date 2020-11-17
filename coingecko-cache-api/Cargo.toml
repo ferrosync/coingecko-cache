@@ -8,6 +8,7 @@ edition = "2018"
 homepage = "https://github.com/ferrosync/coingecko-cache"
 repository = "https://github.com/ferrosync/coingecko-cache"
 readme = "../README.md"
+description = "A REST API that provides historical snapshots of CoinGecko coin dominance API"
 
 [dependencies]
 actix-web = {version = "3", features = ["rust-tls"] }

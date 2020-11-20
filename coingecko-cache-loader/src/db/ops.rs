@@ -73,15 +73,18 @@ pub async fn insert_provenance(
     Ok(ProvenanceId { uuid, object_id })
 }
 
-pub async fn insert_snapshot(
+pub async fn insert_snapshot<'a>(
     timestamp: DateTime<Utc>,
     buffer: &Bytes,
     mime: Option<String>,
     request_meta: &RequestMetadata,
     response_meta: &ResponseMetadata,
-    json: &CoinDominanceResponse,
+    json: Result<CoinDominanceResponse, impl Error + 'static>,
     pool: &PgPool) -> Result<ProvenanceId, Box<dyn Error>> {
 
+    // Log the HTTP response before we try to resolve the result so that we
+    // can track any errors even if we're not getting JSON back.
+    //
     let pid = insert_data_origin_from_http(
         timestamp,
         buffer,
@@ -90,6 +93,8 @@ pub async fn insert_snapshot(
         response_meta,
         pool,
     ).await?;
+
+    let json = json.map_err(Box::new)?;
 
     let mut tx = pool.begin().await?;
 

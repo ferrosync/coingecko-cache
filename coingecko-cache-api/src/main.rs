@@ -4,11 +4,11 @@ mod base64;
 #[macro_use]
 extern crate log;
 
-use std::env;
+use std::{env, fmt};
 use std::error::Error;
 
 use serde::{self, Serialize, Deserialize};
-use serde_with::{serde_as, SerializeAs};
+use serde_with::{serde_as, SerializeAs, DisplayFromStr};
 use serde_json::value::RawValue;
 
 use actix_web::middleware::Logger;
@@ -16,7 +16,7 @@ use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
 use sqlx::types::BigDecimal;
 use chrono::serde::{ts_milliseconds, ts_seconds};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 
 use dotenv::dotenv;
 use listenfd::ListenFd;
@@ -26,10 +26,45 @@ use sqlx::types::chrono::NaiveDateTime;
 
 use crate::repo::{OriginMetadata, RepositoryError};
 use actix_web::body::Body;
+use std::fmt::Display;
+use serde::export::Formatter;
+use std::time::Instant;
+use crate::ResponseStatus::Success;
 
-#[get("/")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+#[serde_as]
+#[serde_as(as = "DisplayFromStr")]
+#[derive(Serialize)]
+enum ResponseStatus {
+    Success,
+    Error,
+}
+
+impl Display for ResponseStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self {
+            ResponseStatus::Success => f.write_str("success"),
+            ResponseStatus::Error => f.write_str("error"),
+        }
+    }
+}
+
+#[serde_as]
+#[derive(Serialize)]
+struct PingResponse {
+    #[serde_as(as = "DisplayFromStr")]
+    status: ResponseStatus,
+
+    #[serde(with = "ts_milliseconds")]
+    timestamp: DateTime<Utc>,
+}
+
+#[get("/api/v0/ping")]
+async fn ping() -> impl Responder {
+    let now = Utc::now();
+    HttpResponse::Ok().json(PingResponse {
+        status: ResponseStatus::Success,
+        timestamp: now,
+    })
 }
 
 #[derive(Deserialize)]
@@ -106,8 +141,12 @@ impl CoinDominanceMeta {
     }
 }
 
+#[serde_as]
 #[derive(Serialize)]
 struct CoinDominanceResponse {
+    #[serde_as(as = "DisplayFromStr")]
+    status: ResponseStatus,
+
     data: Vec<CoinDominanceElement>,
 
     #[serde(with = "ts_seconds")]
@@ -242,6 +281,7 @@ async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db:
     };
 
     let response = CoinDominanceResponse {
+        status: ResponseStatus::Success,
         data: data.elements.into_iter()
             .map(|x| CoinDominanceElement::from_repo(x))
             .collect(),
@@ -258,8 +298,11 @@ async fn manual_hello() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    pretty_env_logger::init();
     dotenv().ok();
+    let log_env = env::var("RUST_LOG").unwrap_or("info".into());
+    pretty_env_logger::formatted_timed_builder()
+        .parse_filters(&log_env)
+        .init();
 
     // Enable receiving passed file descriptors
     // Launch using `systemfd --no-pid -s http::PORT -- cargo watch -x run` to leverage this
@@ -275,11 +318,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         App::new()
             .wrap(Logger::default())
             .data(db_pool.clone())
-            .service(hello)
+            .service(ping)
             .service(get_coingecko_coin_dominance)
             .service(get_data_origin)
             .service(get_blob)
-            .route("/hey", web::get().to(manual_hello))
     });
 
     // Launch server from listenfd

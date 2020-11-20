@@ -1,308 +1,26 @@
+mod api;
 mod repo;
 mod base64;
+mod convert;
+mod ext;
 
 #[macro_use]
 extern crate log;
 
-use std::{env, fmt};
+use std::env;
 use std::error::Error;
 
-use serde::{self, Serialize, Deserialize};
-use serde_with::{serde_as, SerializeAs, DisplayFromStr};
-use serde_json::value::RawValue;
-
 use actix_web::middleware::Logger;
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-
-use sqlx::types::BigDecimal;
-use chrono::serde::{ts_milliseconds, ts_seconds};
-use chrono::{DateTime, Utc, Duration};
+use actix_web::{web, App, HttpServer};
+use sqlx::PgPool;
 
 use dotenv::dotenv;
 use listenfd::ListenFd;
-use sqlx::PgPool;
-use sqlx::types::Uuid;
-use sqlx::types::chrono::NaiveDateTime;
-
-use crate::repo::{OriginMetadata, RepositoryError};
-use actix_web::body::Body;
-use std::fmt::Display;
-use serde::export::Formatter;
-use std::time::Instant;
-use crate::ResponseStatus::Success;
-
-#[serde_as]
-#[serde_as(as = "DisplayFromStr")]
-#[derive(Serialize)]
-enum ResponseStatus {
-    Success,
-    Error,
-}
-
-impl Display for ResponseStatus {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match &self {
-            ResponseStatus::Success => f.write_str("success"),
-            ResponseStatus::Error => f.write_str("error"),
-        }
-    }
-}
-
-#[serde_as]
-#[derive(Serialize)]
-struct PingResponse {
-    #[serde_as(as = "DisplayFromStr")]
-    status: ResponseStatus,
-
-    #[serde(with = "ts_milliseconds")]
-    timestamp: DateTime<Utc>,
-}
-
-#[get("/api/v0/ping")]
-async fn ping() -> impl Responder {
-    let now = Utc::now();
-    HttpResponse::Ok().json(PingResponse {
-        status: ResponseStatus::Success,
-        timestamp: now,
-    })
-}
-
-#[derive(Deserialize)]
-struct CoinDominanceQuery {
-    timestamp: Option<u64>,
-}
-
-#[serde_as]
-#[derive(Serialize)]
-struct CoinDominanceElement {
-    name: String,
-    id: String,
-
-    #[serde_as(as = "ToStringVerbatim")]
-    market_cap_usd: BigDecimal,
-
-    #[serde_as(as = "ToStringVerbatim")]
-    dominance_percentage: BigDecimal,
-}
-
-impl CoinDominanceElement {
-    fn from_repo(data: repo::CoinDominanceRecord) -> CoinDominanceElement {
-        Self {
-            name: data.name,
-            id: data.id,
-            market_cap_usd: data.market_cap_usd,
-            dominance_percentage: data.dominance_percentage,
-        }
-    }
-}
-
-struct ToStringVerbatim { }
-
-impl<T> SerializeAs<T> for ToStringVerbatim
-    where
-        T: ToString,
-{
-    fn serialize_as<S>(source: &T, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-    {
-        let raw_value = RawValue::from_string(source.to_string()).unwrap(); // HACK!
-        raw_value.serialize(serializer)
-    }
-}
-
-#[serde_as]
-#[derive(Serialize)]
-struct CoinDominanceMeta {
-    provenance_uuid: Uuid,
-
-    #[serde_as(as = "serde_with::hex::Hex")]
-    blob_sha256: Vec<u8>,
-
-    #[serde(with = "ts_milliseconds")]
-    imported_at_timestamp: DateTime<Utc>,
-
-    #[serde(with = "ts_milliseconds")]
-    requested_timestamp: DateTime<Utc>,
-
-    #[serde(with = "ts_milliseconds")]
-    actual_timestamp: DateTime<Utc>,
-}
-
-impl CoinDominanceMeta {
-    fn from_repo(data: OriginMetadata) -> CoinDominanceMeta {
-        Self {
-            provenance_uuid: data.provenance_uuid,
-            blob_sha256: data.blob_sha256,
-            imported_at_timestamp: data.imported_at_utc,
-            requested_timestamp: data.requested_timestamp_utc,
-            actual_timestamp: data.actual_timestamp_utc,
-        }
-    }
-}
-
-#[serde_as]
-#[derive(Serialize)]
-struct CoinDominanceResponse {
-    #[serde_as(as = "DisplayFromStr")]
-    status: ResponseStatus,
-
-    data: Vec<CoinDominanceElement>,
-
-    #[serde(with = "ts_seconds")]
-    timestamp: DateTime<Utc>,
-
-    meta: CoinDominanceMeta,
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    status: String,
-    reason: String,
-}
-
-#[serde_as]
-#[derive(Serialize)]
-struct ProvenanceResponse {
-    pub uuid: Uuid,
-    pub agent: String,
-    pub imported_at: DateTime<Utc>,
-
-    #[serde_as(as = "crate::base64::Base64")]
-    pub data: Vec<u8>,
-
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub sha256: Vec<u8>,
-
-    pub request_metadata: Option<serde_json::Value>,
-    pub response_metadata: Option<serde_json::Value>,
-}
-
-impl ProvenanceResponse {
-    fn from_repo(x: repo::Provenance) -> ProvenanceResponse {
-        Self {
-            uuid: x.uuid,
-            agent: x.agent,
-            imported_at: x.timestamp_utc,
-            data: x.data,
-            sha256: x.object_sha256,
-            request_metadata: x.request_metadata,
-            response_metadata: x.response_metadata,
-        }
-    }
-}
-
-trait ToResponse {
-    type Output : Responder;
-    fn to_response(&self) -> Self::Output;
-}
-
-impl ToResponse for RepositoryError {
-    type Output = HttpResponse<Body>;
-    fn to_response(&self) -> Self::Output {
-        match self {
-            RepositoryError::SqlError { source: sqlx::Error::RowNotFound } => {
-                HttpResponse::NotFound().json(ErrorResponse {
-                    status: "error".into(),
-                    reason: "Unable to find data origin requested".into(),
-                })
-            },
-            RepositoryError::SqlError { source } => {
-                error!("Database error: {}", source);
-                HttpResponse::InternalServerError().json(ErrorResponse {
-                    status: "error".into(),
-                    reason: "Invalid database connection error".into(),
-                })
-            },
-        }
-    }
-}
-
-#[get("/api/v0/provenance/{id}")]
-async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl Responder {
-
-    let result =
-        repo::DataOriginRepo::get_by_uuid(*id, db.get_ref())
-            .await;
-
-    let data = match result {
-        Ok(x) => x,
-        Err(e) => return e.to_response(),
-    };
-
-    HttpResponse::Ok().json(ProvenanceResponse::from_repo(data))
-}
-
-#[get("/api/v0/blob/{hash}")]
-async fn get_blob(hash: web::Path<String>, db: web::Data<PgPool>) -> impl Responder {
-
-    let hex = hex::decode(hash.into_inner());
-    let hex = match hex {
-        Err(e) => return HttpResponse::BadRequest().json(ErrorResponse {
-            status: "error".into(),
-            reason: format!("Invalid SHA256 hash: {}", e),
-        }),
-        Ok(buf) => buf,
-    };
-
-    if hex.len() != 32 {
-        return HttpResponse::BadRequest().json(ErrorResponse {
-            status: "error".into(),
-            reason: "Invalid SHA256 hash: Expected length to be 32 bytes".into(),
-        })
-    }
-
-    let result =
-        repo::ObjectStorageRepo::get_by_sha256(hex.as_slice(), db.get_ref())
-            .await;
-
-    let data = match result {
-        Ok(x) => x,
-        Err(e) => return e.to_response(),
-    };
-
-    HttpResponse::Ok()
-        .content_type(data.mime.unwrap_or("application/octet-stream".into()))
-        .body(data.data)
-}
-
-#[get("/api/v0/coingecko/coin_dominance")]
-async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db: web::Data<PgPool>) -> impl Responder {
-    let ts = query.timestamp
-        .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc));
-
-    let result =
-        repo::CoinDominanceRepo::find_by_timestamp_rounded(ts, db.get_ref())
-            .await;
-
-    let data = match result {
-        Ok(x) => x,
-        Err(e) => return e.to_response(),
-    };
-
-    let response = CoinDominanceResponse {
-        status: ResponseStatus::Success,
-        data: data.elements.into_iter()
-            .map(|x| CoinDominanceElement::from_repo(x))
-            .collect(),
-        timestamp: data.meta.actual_timestamp_utc,
-        meta: CoinDominanceMeta::from_repo(data.meta),
-    };
-
-    HttpResponse::Ok().json(response)
-}
-
-async fn manual_hello() -> impl Responder {
-    HttpResponse::Ok().body("Hey there!")
-}
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
-    let log_env = env::var("RUST_LOG").unwrap_or("info".into());
-    pretty_env_logger::formatted_timed_builder()
-        .parse_filters(&log_env)
-        .init();
+    init_logging();
 
     // Enable receiving passed file descriptors
     // Launch using `systemfd --no-pid -s http::PORT -- cargo watch -x run` to leverage this
@@ -318,10 +36,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         App::new()
             .wrap(Logger::default())
             .data(db_pool.clone())
-            .service(ping)
-            .service(get_coingecko_coin_dominance)
-            .service(get_data_origin)
-            .service(get_blob)
+            .service(web::scope("/api/v0/")
+                    .service(api::services()))
     });
 
     // Launch server from listenfd
@@ -336,6 +52,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     info!("Starting server");
     server.run().await?;
-
     Ok(())
+}
+
+fn init_logging() {
+    let log_env_default = "actix_server=info,actix_web=info,sqlx=warn,coingecko_cache_api=info,warn";
+    let log_env_raw = env::var("RUST_LOG");
+    let log_env = log_env_raw.clone().ok()
+        .filter(|env| !env.is_empty())
+        .unwrap_or(log_env_default.into());
+
+    pretty_env_logger::formatted_timed_builder()
+        .parse_filters(&log_env)
+        .init();
+
+    match &log_env_raw {
+        Err(env::VarError::NotUnicode(..)) =>
+            error!("Failed to read 'RUST_LOG' due to invalid Unicode. Using default instead: '{}'", log_env_default),
+
+        Err(env::VarError::NotPresent) =>
+            warn!("Missing 'RUST_LOG'. Using default instead: '{}'", log_env_default),
+
+        Ok(s) if s.is_empty() =>
+            warn!("Got empty 'RUST_LOG'. Using default instead: '{}'", log_env_default),
+
+        Ok(_) => (),
+    }
 }

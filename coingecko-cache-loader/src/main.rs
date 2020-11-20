@@ -1,26 +1,23 @@
-
 mod coingecko;
 mod util;
 mod db;
 
 use std::env;
 use std::error::Error;
-use std::io::Write;
 
-use chrono::{Utc, Local};
+use chrono::{Utc};
 use dotenv::dotenv;
-use log::{trace, debug, info, warn, error};
+use log::{info, warn, error};
 use leaky_bucket::LeakyBuckets;
-use reqwest::header::{CONTENT_TYPE};
+use tokio::time::Duration;
+use reqwest::header::CONTENT_TYPE;
 use reqwest::Url;
 use sqlx::PgPool;
 use sqlx::types::chrono::DateTime;
-use tokio::time::Duration;
 
 use crate::util::{UrlCacheBuster, AtomicCancellation};
 use crate::db::models::ProvenanceId;
 use crate::db::convert::ToMetadata;
-use std::str::FromStr;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

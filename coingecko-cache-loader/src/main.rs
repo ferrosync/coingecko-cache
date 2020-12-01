@@ -6,7 +6,6 @@ use std::env;
 use std::error::Error;
 
 use chrono::{Utc};
-use dotenv::dotenv;
 use log::{info, warn, error};
 use leaky_bucket::LeakyBuckets;
 use tokio::time::Duration;
@@ -21,11 +20,15 @@ use crate::db::convert::ToMetadata;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv().ok();
-    let log_env = env::var("RUST_LOG").unwrap_or("info".into());
+    let env_result = dotenv::dotenv();
+    let log_env = env::var("RUST_LOG").unwrap_or("info,coingecko_cache_loader=debug".into());
     pretty_env_logger::formatted_timed_builder()
         .parse_filters(&log_env)
         .init();
+
+    if let Err(err) = env_result {
+        error!("Failed to load .env file: {}", err);
+    }
 
     let database_url = env::var("DOMFI_LOADER_DATABASE_URL").expect("DOMFI_LOADER_DATABASE_URL missing or unset '.env' file");
     let db_pool = PgPool::connect(&database_url).await?;
@@ -46,6 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or(rate_limit_interval_default);
 
+    info!("Rate limit interval set to 1 req/{:#?}", rate_limit_interval);
+
     //
 
     let http = reqwest::ClientBuilder::new().build().expect("Failed to build HTTP client");
@@ -57,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move { coordinator.await.expect("Failed to start rate limiter coordinator") });
 
     let rate_limiter = buckets.rate_limiter()
-        .max(1)
+        .max(5)
         .tokens(1)
         .refill_amount(1)
         .refill_interval(rate_limit_interval)
@@ -76,6 +81,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let stop_handle = stop_signal_source.clone();
     while stop_handle.can_continue() {
+        rate_limiter.acquire_one().await?;
+
         let url = url_gen.next();
         let result = fetch_to_insert_snapshot(&url, &http, &db_pool).await;
         if let Err(err) = result {
@@ -84,8 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         else if let Ok((ts, uuid)) = result {
             info!("[{}] Committed snapshot at {}", uuid, ts);
         }
-
-        rate_limiter.acquire_one().await?;
     }
 
     info!("Quitting");

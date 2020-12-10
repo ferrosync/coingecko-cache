@@ -58,7 +58,7 @@ pub struct PingResponse {
 //
 
 #[derive(Deserialize)]
-pub struct CoinDominanceQuery {
+pub struct TimestampQuery {
     pub timestamp: Option<u64>,
 }
 
@@ -98,6 +98,18 @@ pub struct CoinDominanceMeta {
     pub actual_timestamp: DateTime<Utc>,
 }
 
+#[serde_as]
+#[derive(Serialize)]
+pub struct PricesMeta {
+    pub provenance_uuid: Uuid,
+
+    #[serde(with = "ts_milliseconds")]
+    pub requested_timestamp: DateTime<Utc>,
+
+    #[serde(with = "ts_milliseconds")]
+    pub actual_timestamp: DateTime<Utc>,
+}
+
 //
 
 #[serde_as]
@@ -112,6 +124,41 @@ pub struct CoinDominanceResponse {
     pub timestamp: DateTime<Utc>,
 
     pub meta: CoinDominanceMeta,
+}
+
+#[serde_as]
+#[derive(Serialize)]
+pub struct PricesResponse<'a> {
+    #[serde_as(as = "DisplayFromStr")]
+    pub status: ResponseStatus,
+
+    // Use a `Vec` to maintain the order of the items
+    // Mainly for keeping "others" at the bottom
+    #[serde(with = "tuple_vec_map")]
+    pub data: Vec<(&'a str, BigDecimal)>,
+
+    #[serde(with = "ts_seconds")]
+    pub timestamp: DateTime<Utc>,
+
+    pub meta: PricesMeta,
+}
+
+#[serde_as]
+#[derive(Serialize)]
+pub struct PriceByIdResponse<'a> {
+    #[serde_as(as = "DisplayFromStr")]
+    pub status: ResponseStatus,
+
+    pub coin_id: &'a str,
+    pub coin_symbol: &'a str,
+
+    pub price: &'a BigDecimal,
+    pub price_original: &'a BigDecimal,
+
+    #[serde(with = "ts_seconds")]
+    pub timestamp: DateTime<Utc>,
+
+    pub meta: PricesMeta,
 }
 
 #[serde_as]

@@ -2,17 +2,18 @@ use actix_web::{Responder, HttpResponse, web, get};
 use chrono::{Utc, NaiveDateTime, DateTime};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::repo;
+use bigdecimal::BigDecimal;
+use crate::{repo, convert};
 use crate::api::convert::ToResponse;
 use crate::api::models::{
     ResponseStatus,
     PingResponse,
     ErrorResponse,
     ProvenanceResponse,
-    CoinDominanceQuery,
+    TimestampQuery,
     CoinDominanceResponse,
-    CoinDominanceElement,
-    CoinDominanceMeta
+    PricesResponse,
+    PriceByIdResponse
 };
 
 #[get("/ping")]
@@ -37,7 +38,7 @@ pub async fn get_data_origin(id: web::Path<Uuid>, db: web::Data<PgPool>) -> impl
         Err(e) => return e.to_response(),
     };
 
-    HttpResponse::Ok().json(ProvenanceResponse::from_repo(data))
+    HttpResponse::Ok().json(ProvenanceResponse::from(data))
 }
 
 #[get("/blob/{hash}")]
@@ -70,7 +71,7 @@ pub async fn get_blob(hash: web::Path<String>, db: web::Data<PgPool>) -> impl Re
 }
 
 #[get("/coingecko/coin_dominance")]
-pub async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>, db: web::Data<PgPool>) -> impl Responder {
+pub async fn get_coingecko_coin_dominance(query: web::Query<TimestampQuery>, db: web::Data<PgPool>) -> impl Responder {
     let ts = query.timestamp
         .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc));
 
@@ -86,10 +87,69 @@ pub async fn get_coingecko_coin_dominance(query: web::Query<CoinDominanceQuery>,
     let response = CoinDominanceResponse {
         status: ResponseStatus::Success,
         data: data.elements.into_iter()
-            .map(|x| CoinDominanceElement::from_repo(x))
+            .map(|x| x.into())
             .collect(),
         timestamp: data.meta.actual_timestamp_utc,
-        meta: CoinDominanceMeta::from_repo(data.meta),
+        meta: data.meta.into(),
+    };
+
+    HttpResponse::Ok().json(response)
+}
+
+#[get("/price")]
+pub async fn get_prices(query: web::Query<TimestampQuery>, db: web::Data<PgPool>) -> impl Responder {
+    let ts = query.timestamp
+        .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc));
+
+    let result =
+        repo::CoinDominanceRepo::find_by_timestamp_rounded(ts, db.get_ref())
+            .await;
+
+    let data = match result {
+        Ok(x) => x,
+        Err(e) => return e.to_response(),
+    };
+
+    let mut prices: Vec<(&str, BigDecimal)> = Vec::new();
+
+    for x in data.elements.iter() {
+        let id = if x.id.is_empty() { "others" } else { &x.id };
+        prices.push((id, convert::round_price_identifier(&x.dominance_percentage)));
+    }
+
+    let response = PricesResponse {
+        status: ResponseStatus::Success,
+        data: prices,
+        timestamp: data.meta.actual_timestamp_utc,
+        meta: data.meta.into(),
+    };
+
+    HttpResponse::Ok().json(response)
+}
+
+
+#[get("/price/{id}")]
+pub async fn get_price_by_id(id: web::Path<String>, query: web::Query<TimestampQuery>, db: web::Data<PgPool>) -> impl Responder {
+    let ts = query.timestamp
+        .map(|x| DateTime::from_utc(NaiveDateTime::from_timestamp(x as i64, 0), Utc));
+
+    let result =
+        repo::CoinDominanceRepo::find_by_id_at_timestamp_rounded(&**id, ts, db.get_ref())
+            .await;
+
+    let data = match result {
+        Ok(x) => x,
+        Err(e) => return e.to_response(),
+    };
+
+    let response = PriceByIdResponse {
+        status: ResponseStatus::Success,
+        coin_id: &data.coin_id,
+        coin_symbol: &data.coin_symbol,
+        price: &convert::round_price_identifier(&data.percentage),
+        price_original: &data.percentage,
+        timestamp: data.meta.actual_timestamp_utc,
+        meta: data.meta.into(),
     };
 
     HttpResponse::Ok().json(response)

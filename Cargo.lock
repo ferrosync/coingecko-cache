@@ -585,8 +585,10 @@ dependencies = [
  "hex",
  "listenfd",
  "log",
+ "net2",
  "pretty_env_logger",
  "serde",
+ "serde-tuple-vec-map",
  "serde_json",
  "serde_with",
  "snafu",
@@ -2029,6 +2031,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-tuple-vec-map"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fb19e2d413f0c7c977fbb859eba82d3027e6da303749c6a5476d9f0ed3b9c76"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

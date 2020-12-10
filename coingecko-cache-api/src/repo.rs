@@ -15,11 +15,24 @@ pub struct OriginMetadata {
     pub blob_sha256: Vec<u8>,
 }
 
+pub struct OriginMetadataSlim {
+    pub requested_timestamp_utc: DateTime<Utc>,
+    pub actual_timestamp_utc: DateTime<Utc>,
+    pub provenance_uuid: Uuid,
+}
+
 pub struct CoinDominanceRecord {
     pub name: String,
     pub id: String,
     pub market_cap_usd: BigDecimal,
     pub dominance_percentage: BigDecimal,
+}
+
+pub struct PricingResult {
+    pub meta: OriginMetadataSlim,
+    pub coin_id: String,
+    pub coin_symbol: String,
+    pub percentage: BigDecimal,
 }
 
 pub struct FindByTimestampResult {
@@ -184,7 +197,10 @@ impl CoinDominanceRepo {
         })
     }
 
-    pub async fn find_by_timestamp_rounded(ts: Option<DateTime<Utc>>, pool: &PgPool) -> Result<FindByTimestampResult, RepositoryError> {
+    pub async fn find_by_timestamp_rounded(
+        ts: Option<DateTime<Utc>>,
+        pool: &PgPool
+    ) -> Result<FindByTimestampResult, RepositoryError> {
 
         let timestamp_agent = match ts {
             Some(ts) => Self::timestamp_from_range(ts, pool).await?,
@@ -232,8 +248,9 @@ impl CoinDominanceRepo {
             });
 
             let actual_timestamp = Utc.from_utc_datetime(&x.timestamp_utc);
+            let requested_timestamp = ts.unwrap_or(actual_timestamp);
             let m = OriginMetadata {
-                requested_timestamp_utc: ts.unwrap_or(actual_timestamp),
+                requested_timestamp_utc: requested_timestamp,
                 provenance_uuid: x.provenance_uuid,
                 actual_timestamp_utc: actual_timestamp,
                 imported_at_utc: Utc.from_utc_datetime(&x.imported_at_utc),
@@ -258,6 +275,61 @@ impl CoinDominanceRepo {
         Ok(FindByTimestampResult {
             meta,
             elements
+        })
+    }
+
+    pub async fn find_by_id_at_timestamp_rounded(
+        id: &str,
+        ts: Option<DateTime<Utc>>,
+        pool: &PgPool
+    ) -> Result<PricingResult, RepositoryError> {
+
+        let timestamp_agent = match ts {
+            Some(ts) => Self::timestamp_from_range(ts, pool).await?,
+            None => Self::latest_timestamp_agent(pool).await?,
+        };
+
+        let x =
+            sqlx::query!(r#"
+                select
+                    data.provenance_uuid,
+                    data.timestamp_utc,
+                    data.coin_id,
+                    data.coin_name,
+                    data.market_dominance_percentage
+                from
+                    coin_dominance as data
+                where
+                    data.timestamp_utc = $1
+                    and data.agent = $2
+                    and data.coin_id = $3
+                order by
+                    -- note: force pushing the "others" to the bottom of the list
+                    case when ((data.coin_id <> '') is not true) then 1 else 0 end,
+
+                    -- then sort by market cap descending
+                    data.market_cap_usd desc
+                limit 1
+                "#,
+                timestamp_agent.timestamp.naive_utc(),
+                timestamp_agent.agent,
+                id)
+                .fetch_one(pool)
+                .await
+                .context(SqlError)?;
+
+        let actual_timestamp = Utc.from_utc_datetime(&x.timestamp_utc);
+        let requested_timestamp = ts.unwrap_or(actual_timestamp);
+
+        Ok(PricingResult {
+            coin_id: x.coin_id,
+            coin_symbol: x.coin_name,
+            percentage: x.market_dominance_percentage,
+            meta: OriginMetadataSlim {
+                requested_timestamp_utc: requested_timestamp,
+                actual_timestamp_utc: actual_timestamp,
+                provenance_uuid: x.provenance_uuid,
+            },
         })
     }
 }

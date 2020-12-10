@@ -30,26 +30,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         error!("Failed to load .env file: {}", err);
     }
 
-    let database_url = env::var("DOMFI_LOADER_DATABASE_URL").expect("DOMFI_LOADER_DATABASE_URL missing or unset '.env' file");
-    let db_pool = PgPool::connect(&database_url).await?;
+    let config = get_config().await?;
+    let db_pool = PgPool::connect(&config.database_url).await?;
 
-    let url_raw = env::var("DOMFI_LOADER_URL").expect("DOMFI_LOADER_URL missing or unset in '.env' file");
-    let url = Url::parse(url_raw.as_str()).expect("DOMFI_LOADER_URL has invalid URL format");
-    let mut url_gen = UrlCacheBuster::new(&url);
-
-    let rate_limit_interval_default = Duration::from_millis(1250);
-    let rate_limit_interval = env::var("DOMFI_LOADER_INTERVAL").ok()
-        .and_then(|s| match parse_duration::parse(&s) {
-            Err(err) => {
-                warn!("Failed to parse 'DOMFI_LOADER_INTERVAL'. Using default value instead of '{:#?}'. Cause: {}",
-                      rate_limit_interval_default, err);
-                None
-            }
-            Ok(dur) => Some(dur)
-        })
-        .unwrap_or(rate_limit_interval_default);
-
-    info!("Rate limit interval set to 1 req/{:#?}", rate_limit_interval);
+    info!("Rate limit interval set to 1 req/{:#?}", config.rate_limit_interval);
 
     //
 
@@ -65,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .max(5)
         .tokens(1)
         .refill_amount(1)
-        .refill_interval(rate_limit_interval)
+        .refill_interval(config.rate_limit_interval)
         .build()
         .expect("Failed to build request rate limiter");
 
@@ -80,6 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .expect("Error setting Ctrl-C handler");
 
     let stop_handle = stop_signal_source.clone();
+    let mut url_gen = config.url_gen();
     while stop_handle.can_continue() {
         rate_limiter.acquire_one().await?;
 
@@ -95,6 +80,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Quitting");
     Ok(())
+}
+
+struct Config {
+    database_url: String,
+    url: Url,
+    rate_limit_interval: Duration,
+}
+
+impl Config {
+    fn url_gen(&self) -> UrlCacheBuster {
+        UrlCacheBuster::new(&self.url)
+    }
+}
+
+async fn get_config() -> Result<Config, Box<dyn Error>> {
+    let database_url = env::var("DOMFI_LOADER_DATABASE_URL").expect("DOMFI_LOADER_DATABASE_URL missing or unset '.env' file");
+
+    let url_raw = env::var("DOMFI_LOADER_URL").expect("DOMFI_LOADER_URL missing or unset in '.env' file");
+    let url = Url::parse(url_raw.as_str()).expect("DOMFI_LOADER_URL has invalid URL format");
+
+    let rate_limit_interval_default = Duration::from_millis(1250);
+    let rate_limit_interval = env::var("DOMFI_LOADER_INTERVAL").ok()
+        .and_then(|s| match parse_duration::parse(&s) {
+            Err(err) => {
+                warn!("Failed to parse 'DOMFI_LOADER_INTERVAL'. Using default value instead of '{:#?}'. Cause: {}",
+                      rate_limit_interval_default, err);
+                None
+            }
+            Ok(dur) => Some(dur)
+        })
+        .unwrap_or(rate_limit_interval_default);
+
+    Ok(Config {
+        database_url,
+        url,
+        rate_limit_interval,
+    })
 }
 
 

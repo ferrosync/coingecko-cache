@@ -10,4 +10,6 @@ pub fn services() -> Scope {
         .service(routes::get_blob)
         .service(routes::get_coingecko_coin_dominance)
         .service(routes::get_data_origin)
+        .service(routes::get_prices)
+        .service(routes::get_price_by_id)
 }

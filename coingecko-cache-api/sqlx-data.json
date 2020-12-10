@@ -225,5 +225,51 @@
         false
       ]
     }
+  },
+  "dc6e85dd5953154bf0a4f365da58cdaf66cb685e41464806f8e2d5bb3f6d5c2f": {
+    "query": "\n                select\n                    data.provenance_uuid,\n                    data.timestamp_utc,\n                    data.coin_id,\n                    data.coin_name,\n                    data.market_dominance_percentage\n                from\n                    coin_dominance as data\n                where\n                    data.timestamp_utc = $1\n                    and data.agent = $2\n                    and data.coin_id = $3\n                order by\n                    -- note: force pushing the \"others\" to the bottom of the list\n                    case when ((data.coin_id <> '') is not true) then 1 else 0 end,\n\n                    -- then sort by market cap descending\n                    data.market_cap_usd desc\n                limit 1\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "provenance_uuid",
+          "type_info": "Uuid"
+        },
+        {
+          "ordinal": 1,
+          "name": "timestamp_utc",
+          "type_info": "Timestamp"
+        },
+        {
+          "ordinal": 2,
+          "name": "coin_id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "coin_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "market_dominance_percentage",
+          "type_info": "Numeric"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Timestamp",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
   }
 }

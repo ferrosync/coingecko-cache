@@ -69,7 +69,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         rate_limiter.acquire_one().await?;
 
         let url = url_gen.next();
-        let result = fetch_to_insert_snapshot(&url, &http, &db_pool).await;
+        let result = fetch_to_insert_snapshot(
+            &config.agent_name,
+            &url,
+            &http,
+            &db_pool
+        ).await;
+
         if let Err(err) = result {
             error!("Failed to insert snapshot! Cause: {}", err);
         }
@@ -83,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 struct Config {
+    agent_name: String,
     database_url: String,
     url: Url,
     rate_limit_interval: Duration,
@@ -95,6 +102,7 @@ impl Config {
 }
 
 async fn get_config() -> Result<Config, Box<dyn Error>> {
+    let agent_name = env::var("DOMFI_LOADER_AGENT_NAME").unwrap_or("loader_rust".into());
     let database_url = env::var("DOMFI_LOADER_DATABASE_URL").expect("DOMFI_LOADER_DATABASE_URL missing or unset '.env' file");
 
     let url_raw = env::var("DOMFI_LOADER_URL").expect("DOMFI_LOADER_URL missing or unset in '.env' file");
@@ -113,6 +121,7 @@ async fn get_config() -> Result<Config, Box<dyn Error>> {
         .unwrap_or(rate_limit_interval_default);
 
     Ok(Config {
+        agent_name,
         database_url,
         url,
         rate_limit_interval,
@@ -120,7 +129,7 @@ async fn get_config() -> Result<Config, Box<dyn Error>> {
 }
 
 
-async fn fetch_to_insert_snapshot(url: &Url, http: &reqwest::Client, db_pool: &PgPool)
+async fn fetch_to_insert_snapshot(agent_name: &str, url: &Url, http: &reqwest::Client, db_pool: &PgPool)
     -> Result<(DateTime<Utc>, ProvenanceId), Box<dyn Error>>
 {
     let request_builder = http.get(url.clone());
@@ -141,6 +150,7 @@ async fn fetch_to_insert_snapshot(url: &Url, http: &reqwest::Client, db_pool: &P
 
     let pid = db::ops::insert_snapshot(
         now,
+        agent_name,
         &buffer,
         mime,
         &request_meta,

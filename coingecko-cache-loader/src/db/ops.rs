@@ -14,6 +14,7 @@ use crate::db::models::{ProvenanceId, RequestMetadata, ResponseMetadata};
 
 pub async fn insert_provenance(
     timestamp: DateTime<Utc>,
+    agent_name: &str,
     buffer: &Bytes,
     mime: Option<String>,
     request_meta: &Option<serde_json::Value>,
@@ -62,7 +63,7 @@ pub async fn insert_provenance(
     "#,
         uuid,
         storage.id,
-        "loader_rust",
+        agent_name,
         timestamp.naive_utc(),
         *request_meta,
         *response_meta)
@@ -75,6 +76,7 @@ pub async fn insert_provenance(
 
 pub async fn insert_snapshot<'a>(
     timestamp: DateTime<Utc>,
+    agent_name: &str,
     buffer: &Bytes,
     mime: Option<String>,
     request_meta: &RequestMetadata,
@@ -87,6 +89,7 @@ pub async fn insert_snapshot<'a>(
     //
     let pid = insert_data_origin_from_http(
         timestamp,
+        agent_name,
         buffer,
         mime,
         request_meta,
@@ -131,6 +134,7 @@ pub async fn insert_snapshot<'a>(
 
 pub async fn insert_data_origin_from_http(
     timestamp: DateTime<Utc>,
+    agent_name: &str,
     buffer: &Bytes,
     mime: Option<String>,
     request_meta: &RequestMetadata,
@@ -151,6 +155,7 @@ pub async fn insert_data_origin_from_http(
 
     let pid = insert_provenance(
         timestamp,
+        agent_name,
         buffer,
         mime,
         &request_meta,

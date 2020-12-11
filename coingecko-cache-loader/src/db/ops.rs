@@ -118,7 +118,7 @@ pub async fn insert_snapshot<'a>(
         "#,
         pid.uuid,
         pid.object_id,
-        "loader_rust",
+        agent_name,
         json.timestamp.naive_utc(),
         coin.id,
         coin.name,

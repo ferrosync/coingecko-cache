@@ -103,6 +103,8 @@ impl Config {
 
 async fn get_config() -> Result<Config, Box<dyn Error>> {
     let agent_name = env::var("DOMFI_LOADER_AGENT_NAME").unwrap_or("loader_rust".into());
+    info!("Agent name: '{}'", agent_name);
+
     let database_url = env::var("DOMFI_LOADER_DATABASE_URL").expect("DOMFI_LOADER_DATABASE_URL missing or unset '.env' file");
 
     let url_raw = env::var("DOMFI_LOADER_URL").expect("DOMFI_LOADER_URL missing or unset in '.env' file");

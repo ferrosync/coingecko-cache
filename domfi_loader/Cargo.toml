@@ -1,5 +1,5 @@
 [package]
-name = "coingecko_cache_loader"
+name = "domfi_loader"
 version = "0.1.0"
 authors = ["Josh Bowden <josh@ferrosync.io>"]
 license = "MIT OR Apache-2.0"
@@ -11,6 +11,8 @@ readme = "../README.md"
 description = "CoinGecko API poller for coin dominance and database loader for snapshots"
 
 [dependencies]
+domfi_util = { path = "../domfi_util" }
+
 sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "macros", "runtime-tokio-rustls", "offline" ] }
 reqwest = { version = "0.10", default-features = false, features = ["json", "rustls-tls", "cookies", "json", "gzip", "brotli", "stream"] }
 tokio = { version = "0.2", features = ["full", "time"] }

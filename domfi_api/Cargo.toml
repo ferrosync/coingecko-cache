@@ -1,5 +1,5 @@
 [package]
-name = "coingecko_cache_api"
+name = "domfi_api"
 version = "0.1.0"
 authors = ["Josh Bowden <josh@ferrosync.io>"]
 license = "MIT OR Apache-2.0"
@@ -11,7 +11,9 @@ readme = "../README.md"
 description = "A REST API that provides historical snapshots of CoinGecko coin dominance API"
 
 [dependencies]
-actix-web = {version = "3", features = ["rust-tls"] }
+domfi_util = { path = "../domfi_util" }
+
+actix-web = { version = "3", features = ["rust-tls"] }
 sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "runtime-tokio-rustls", "macros", "offline" ] }
 
 dotenv = "0.15.0"

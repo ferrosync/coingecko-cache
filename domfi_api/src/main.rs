@@ -19,10 +19,15 @@ use listenfd::ListenFd;
 use net2::TcpBuilder;
 use net2::unix::UnixTcpBuilderExt;
 
+use domfi_util::init_logging;
+
+const DEFAULT_LOG_FILTERS: &'static str =
+    "actix_server=info,actix_web=info,sqlx=warn,coingecko_cache_api=info,warn";
+
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     dotenv().ok();
-    init_logging();
+    init_logging(DEFAULT_LOG_FILTERS);
 
     // Enable receiving passed file descriptors
     // Launch using `systemfd --no-pid -s http::PORT -- cargo watch -x run` to leverage this
@@ -116,31 +121,5 @@ fn bind_to<A: net::ToSocketAddrs>(
         }
     } else {
         Ok(sockets)
-    }
-}
-
-
-fn init_logging() {
-    let log_env_default = "actix_server=info,actix_web=info,sqlx=warn,coingecko_cache_api=info,warn";
-    let log_env_raw = env::var("RUST_LOG");
-    let log_env = log_env_raw.clone().ok()
-        .filter(|env| !env.is_empty())
-        .unwrap_or(log_env_default.into());
-
-    pretty_env_logger::formatted_timed_builder()
-        .parse_filters(&log_env)
-        .init();
-
-    match &log_env_raw {
-        Err(env::VarError::NotUnicode(..)) =>
-            error!("Failed to read 'RUST_LOG' due to invalid Unicode. Using default instead: '{}'", log_env_default),
-
-        Err(env::VarError::NotPresent) =>
-            warn!("Missing 'RUST_LOG'. Using default instead: '{}'", log_env_default),
-
-        Ok(s) if s.is_empty() =>
-            warn!("Got empty 'RUST_LOG'. Using default instead: '{}'", log_env_default),
-
-        Ok(_) => (),
     }
 }

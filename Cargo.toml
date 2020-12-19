@@ -1,2 +1,6 @@
 [workspace]
-members = ["coingecko-cache-api", "coingecko-cache-loader"]
+members = [
+    "domfi_api",
+    "domfi_loader",
+    "domfi_util",
+]

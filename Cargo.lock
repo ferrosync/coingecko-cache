@@ -573,56 +573,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "coingecko_cache_api"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "base64 0.13.0",
- "bigdecimal",
- "chrono",
- "dotenv",
- "futures",
- "hex",
- "listenfd",
- "log",
- "net2",
- "pretty_env_logger",
- "serde",
- "serde-tuple-vec-map",
- "serde_json",
- "serde_with",
- "snafu",
- "sqlx",
- "uuid 0.8.1",
-]
-
-[[package]]
-name = "coingecko_cache_loader"
-version = "0.1.0"
-dependencies = [
- "base64 0.13.0",
- "bigdecimal",
- "bytes",
- "chrono",
- "ctrlc",
- "dotenv",
- "futures",
- "leaky-bucket",
- "log",
- "parse_duration",
- "pretty_env_logger",
- "rand",
- "reqwest",
- "serde",
- "serde_json",
- "serde_with",
- "sha2",
- "sqlx",
- "tokio",
- "uuid 0.8.1",
-]
-
-[[package]]
 name = "const_fn"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -794,6 +744,66 @@ name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
+name = "domfi_api"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "base64 0.13.0",
+ "bigdecimal",
+ "chrono",
+ "domfi_util",
+ "dotenv",
+ "futures",
+ "hex",
+ "listenfd",
+ "log",
+ "net2",
+ "pretty_env_logger",
+ "serde",
+ "serde-tuple-vec-map",
+ "serde_json",
+ "serde_with",
+ "snafu",
+ "sqlx",
+ "uuid 0.8.1",
+]
+
+[[package]]
+name = "domfi_loader"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.0",
+ "bigdecimal",
+ "bytes",
+ "chrono",
+ "ctrlc",
+ "domfi_util",
+ "dotenv",
+ "futures",
+ "leaky-bucket",
+ "log",
+ "parse_duration",
+ "pretty_env_logger",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "uuid 0.8.1",
+]
+
+[[package]]
+name = "domfi_util"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "pretty_env_logger",
+]
 
 [[package]]
 name = "dotenv"

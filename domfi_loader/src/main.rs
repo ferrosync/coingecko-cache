@@ -14,17 +14,17 @@ use reqwest::Url;
 use sqlx::PgPool;
 use sqlx::types::chrono::DateTime;
 
+use domfi_util::init_logging;
 use crate::util::{UrlCacheBuster, AtomicCancellation};
 use crate::db::models::ProvenanceId;
 use crate::db::convert::ToMetadata;
 
+const DEFAULT_LOG_FILTERS: &'static str = "info,coingecko_cache_loader=debug";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let env_result = dotenv::dotenv();
-    let log_env = env::var("RUST_LOG").unwrap_or("info,coingecko_cache_loader=debug".into());
-    pretty_env_logger::formatted_timed_builder()
-        .parse_filters(&log_env)
-        .init();
+    init_logging(DEFAULT_LOG_FILTERS);
 
     if let Err(err) = env_result {
         error!("Failed to load .env file: {}", err);

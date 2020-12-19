@@ -1,13 +1,14 @@
 
-# CoinGecko - Coin Dominance Historical API
+# DominationFinance - Coin Dominance Historical API
+***powered by [CoinGecko](https://www.coingecko.com/)***
 
 Since CoinGecko doesn't have a historical API for cryptocurrency coin dominance,
 this functions as a workaround to cache and provide historical snapshots via a
 REST API.
 
 This contains the following subprojects:
- * `coingecko-cache-api` -- the REST API build on [`actix-web`](https://actix.rs/)
- * `coingecko-cache-loader` -- the CoinGecko API fetcher and database loader
+ * `domfi_api` -- the REST API build on [`actix-web`](https://actix.rs/)
+ * `domfi_loader` -- the CoinGecko API fetcher and database loader
 
 ## Building & Deploying
 

@@ -9,10 +9,11 @@ use serde::{Serialize, Deserialize};
 use serde_with::{serde_as};
 use serde_with::DisplayFromStr;
 use chrono::serde::{ts_milliseconds, ts_seconds};
-use crate::ext::serde_with::ToStringVerbatim;
+use domfi_ext_serde::ToStringVerbatim;
+use std::sync::Arc;
+use crate::historical::{ClientFindByIdHistoryDataset, ClientFindByIdHistoryDatasetSlim};
 
-#[serde_as]
-#[serde_as(as = "DisplayFromStr")]
+#[serde(rename_all = "lowercase")]
 #[derive(Serialize)]
 pub enum ResponseStatus {
     Success,
@@ -178,3 +179,20 @@ pub struct ProvenanceResponse {
     pub response_metadata: Option<serde_json::Value>,
 }
 
+//
+
+#[serde_as]
+#[derive(Serialize)]
+pub struct HistoryResponse {
+    #[serde_as(as = "DisplayFromStr")]
+    pub status: ResponseStatus,
+    pub data: Arc<ClientFindByIdHistoryDataset>,
+}
+
+#[serde_as]
+#[derive(Serialize)]
+pub struct HistoryResponseSlim<'a> {
+    #[serde_as(as = "DisplayFromStr")]
+    pub status: ResponseStatus,
+    pub data: ClientFindByIdHistoryDatasetSlim<'a>,
+}

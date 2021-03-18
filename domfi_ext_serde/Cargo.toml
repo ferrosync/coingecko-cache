@@ -1,0 +1,16 @@
+[package]
+name = "domfi_ext_serde"
+version = "0.1.0"
+authors = ["Josh Bowden <josh@ferrosync.io>"]
+edition = "2018"
+
+[features]
+default = []
+serde_deser_unquoted_bigdecimal = ["serde_json/arbitrary_precision"]
+
+[dependencies]
+bigdecimal = "0.2"
+
+serde = "1"
+serde_with = "1"
+serde_json = { version = "1", features = ["raw_value"] }

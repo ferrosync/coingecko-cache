@@ -2,8 +2,7 @@ version: "3"
 
 services:
   db:
-    build:
-      context: ./db
+    image: postgres:13
     ports:
       - "54320:5432"
     environment:

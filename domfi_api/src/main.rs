@@ -2,24 +2,25 @@ mod api;
 mod repo;
 mod base64;
 mod convert;
-mod ext;
+mod historical;
 
 #[macro_use]
 extern crate log;
 
-use std::{env, net, io};
+#[macro_use]
+extern crate lazy_static;
+
+use std::env;
 use std::error::Error;
 
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpServer, middleware};
 use sqlx::PgPool;
-
 use dotenv::dotenv;
 use listenfd::ListenFd;
-use net2::TcpBuilder;
-use net2::unix::UnixTcpBuilderExt;
 
 use domfi_util::init_logging;
+use crate::historical::HistoricalCacheService;
 
 const DEFAULT_LOG_FILTERS: &'static str =
     "actix_server=info,actix_web=info,sqlx=warn,coingecko_cache_api=info,warn";
@@ -38,10 +39,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let database_url = env::var("DOMFI_API_DATABASE_URL").expect("DATABASE_URL is not set in .env file");
     let db_pool = PgPool::connect(&database_url).await?;
 
+    let (historical_cache_service, history_rx) =
+        HistoricalCacheService::new(
+            db_pool.clone(),
+            1024,
+            std::time::Duration::from_secs(5 * 60),
+            std::time::Duration::from_secs(45));
+
+    tokio::spawn(historical_cache_service.into_run());
+
     // HTTP Server
     let mut server = HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
+            .wrap(Logger::new(r#"%{r}a [%a] "%r" %s %b "%{Referer}i" "%{User-Agent}i" %Dms"#))
+            .wrap(middleware::Compress::default())
+            .data(history_rx.clone())
             .data(db_pool.clone())
             .service(web::scope("/api/v0/")
                 .service(api::services()))
@@ -60,7 +72,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let port = env::var("DOMFI_API_PORT").expect("DOMFI_API_PORT is not set in .env file");
 
             let addr_input = format!("{}:{}", host, port);
-            let sockets = bind_to(addr_input, 2048)?;
+            let sockets = domfi_ext_tcp::bind_to(addr_input, 2048)?;
             for s in sockets {
                 server = server.listen(s)?;
             }
@@ -72,54 +84,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting server");
     server.run().await?;
     Ok(())
-}
-
-fn create_tcp_listener(
-    addr: net::SocketAddr,
-    backlog: i32,
-) -> io::Result<net::TcpListener> {
-    let builder = match addr {
-        net::SocketAddr::V4(_) => TcpBuilder::new_v4()?,
-        net::SocketAddr::V6(_) => TcpBuilder::new_v6()?,
-    };
-
-    let socket = builder
-        .reuse_address(true)?
-        .reuse_port(true)?
-        .bind(addr)?
-        .listen(backlog)?;
-
-    Ok(socket)
-}
-
-fn bind_to<A: net::ToSocketAddrs>(
-    addr: A,
-    backlog: i32,
-) -> io::Result<Vec<net::TcpListener>> {
-    let mut err = None;
-    let mut success = false;
-    let mut sockets = Vec::new();
-
-    for addr in addr.to_socket_addrs()? {
-        match create_tcp_listener(addr, backlog) {
-            Ok(lst) => {
-                success = true;
-                sockets.push(lst);
-            }
-            Err(e) => err = Some(e),
-        }
-    }
-
-    if !success {
-        if let Some(e) = err.take() {
-            Err(e)
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Can not bind to address.",
-            ))
-        }
-    } else {
-        Ok(sockets)
-    }
 }

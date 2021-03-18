@@ -1,12 +1,12 @@
 
-create table object_storage (
+create table if not exists object_storage (
     id bigint primary key generated always as identity,
     sha256 bytea not null unique check (length(sha256) = 32 /* bytes */),
     data bytea not null,
     mime text
 );
 
-create table provenance (
+create table if not exists provenance (
     uuid uuid primary key,
     object_id bigint not null references object_storage(id),
     timestamp_utc timestamp not null,
@@ -16,7 +16,7 @@ create table provenance (
     unique (uuid, object_id)
 );
 
-create table coin_dominance (
+create table if not exists coin_dominance (
     id bigint primary key generated always as identity,
     provenance_uuid uuid not null,
     object_id bigint not null,
@@ -31,16 +31,31 @@ create table coin_dominance (
     foreign key (provenance_uuid, object_id) references provenance(uuid, object_id)
 );
 
-create index on coin_dominance(timestamp_utc);
+create index if on coin_dominance(timestamp_utc);
 
-create role domfi_coingecko_ro
-    login password 'development_only';
+DO $$
+BEGIN
+    CREATE ROLE domfi_coingecko_ro LOGIN PASSWORD 'development_only';
+
+EXCEPTION
+    WHEN DUPLICATE_OBJECT THEN
+        RAISE NOTICE 'CREATE ROLE already exists. Ignoring.';
+END
+$$;
+
 grant select on table object_storage to domfi_coingecko_ro;
 grant select on table provenance to domfi_coingecko_ro;
 grant select on table coin_dominance to domfi_coingecko_ro;
 
-create role domfi_coingecko_loader
-    login password 'development_only';
+DO $$
+BEGIN
+    CREATE ROLE domfi_coingecko_loader LOGIN PASSWORD 'development_only';
+
+EXCEPTION
+    WHEN DUPLICATE_OBJECT THEN
+        RAISE NOTICE 'CREATE ROLE already exists. Ignoring.';
+END
+$$;
 grant select, update, insert on table object_storage to domfi_coingecko_loader;
 grant select, update, insert on table provenance to domfi_coingecko_loader;
 grant select, update, insert on table coin_dominance to domfi_coingecko_loader;

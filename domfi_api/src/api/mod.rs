@@ -12,4 +12,5 @@ pub fn services() -> Scope {
         .service(routes::get_data_origin)
         .service(routes::get_prices)
         .service(routes::get_price_by_id)
+        .service(routes::get_price_historical_by_id)
 }

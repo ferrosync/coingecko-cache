@@ -1,7 +1,11 @@
 use std::fmt::{Display, Formatter};
 use std::fmt;
+
+use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::borrow::Cow;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct ProvenanceId {
@@ -43,3 +47,12 @@ pub struct ResponseMetadata {
     pub status: u16,
     pub headers: HeaderMapSerializable,
 }
+
+pub struct CoinDominanceEntry<'a> {
+    pub name: Cow<'a, str>,
+    pub id: Cow<'a, str>,
+    pub market_cap_usd: Cow<'a, BigDecimal>,
+    pub dominance_percentage: Cow<'a, BigDecimal>,
+    pub timestamp: Cow<'a, DateTime<Utc>>,
+}
+

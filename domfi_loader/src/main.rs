@@ -1,25 +1,22 @@
 mod coingecko;
 mod util;
-mod db;
 
 use std::env;
 use std::error::Error;
+use std::borrow::Cow;
 
-use chrono::{Utc};
 use log::{info, warn, error};
 use leaky_bucket::LeakyBuckets;
 use tokio::time::Duration;
-use reqwest::header::CONTENT_TYPE;
 use reqwest::Url;
 use sqlx::PgPool;
-use sqlx::types::chrono::DateTime;
 
 use domfi_util::init_logging;
+use domfi_data::pg;
+use domfi_data::pg::models::CoinDominanceEntry;
 use crate::util::{UrlCacheBuster, AtomicCancellation};
-use crate::db::models::ProvenanceId;
-use crate::db::convert::ToMetadata;
 
-const DEFAULT_LOG_FILTERS: &'static str = "info,coingecko_cache_loader=debug";
+const DEFAULT_LOG_FILTERS: &'static str = "info,domfi_loader=debug";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -69,18 +66,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         rate_limiter.acquire_one().await?;
 
         let url = url_gen.next();
-        let result = fetch_to_insert_snapshot(
-            &config.agent_name,
-            &url,
-            &http,
-            &db_pool
-        ).await;
+        let result =
+            pg::ops::provenance::insert_from_json_url::<coingecko::CoinDominanceResponse, _, _>(
+                &config.agent_name,
+                url,
+                &http,
+                &db_pool
+            ).await;
 
-        if let Err(err) = result {
-            error!("Failed to insert snapshot! Cause: {}", err);
-        }
-        else if let Ok((ts, uuid)) = result {
-            info!("[{}] Committed snapshot at {}", uuid, ts);
+        let ctx = match result {
+            Err(err) => {
+                error!("Failed to insert provenance! Cause: {}", err);
+                continue;
+            },
+            Ok(x) => x,
+        };
+
+        let dataset_timestamp = ctx.json.timestamp;
+        let rows: Vec<_> = ctx.json.data.into_iter()
+            .map(|r| {
+                CoinDominanceEntry {
+                    name: Cow::Owned(r.name),
+                    id: Cow::Owned(r.id),
+                    market_cap_usd: Cow::Owned(r.market_cap_usd),
+                    dominance_percentage: Cow::Owned(r.dominance_percentage),
+                    timestamp: Cow::Borrowed(&dataset_timestamp)
+                }
+            })
+            .collect();
+
+        let result =
+            pg::ops::coin_dominance_entry::insert(
+                &config.agent_name,
+                &ctx.provenance,
+                rows.as_slice(),
+                &db_pool,
+            ).await;
+
+        let provenance_uuid = &ctx.provenance.uuid;
+        match result {
+            Err(e) => {
+                error!("[{}] Failed to insert coin dominance! Cause: {}", provenance_uuid, e);
+                continue;
+            },
+            Ok(_) => {
+                info!("[{}] Committed snapshot at {}", provenance_uuid, &ctx.imported_at);
+            }
         }
     }
 
@@ -130,36 +161,3 @@ async fn get_config() -> Result<Config, Box<dyn Error>> {
     })
 }
 
-
-async fn fetch_to_insert_snapshot(agent_name: &str, url: &Url, http: &reqwest::Client, db_pool: &PgPool)
-    -> Result<(DateTime<Utc>, ProvenanceId), Box<dyn Error>>
-{
-    let request_builder = http.get(url.clone());
-
-    let request = request_builder.build()?;
-    let request_meta = request.to_metadata();
-
-    let response = http.execute(request).await?;
-    let now = Utc::now();
-
-    let mime = response.headers()
-        .get(CONTENT_TYPE)
-        .and_then(|x| x.to_str().map(|s| s.to_string()).ok());
-
-    let response_meta = response.to_metadata();
-    let buffer = response.bytes().await?;
-    let json = serde_json::from_slice::<coingecko::CoinDominanceResponse>(&buffer);
-
-    let pid = db::ops::insert_snapshot(
-        now,
-        agent_name,
-        &buffer,
-        mime,
-        &request_meta,
-        &response_meta,
-        json,
-        &db_pool
-    ).await?;
-
-    Ok((now, pid))
-}

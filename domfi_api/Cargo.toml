@@ -12,15 +12,19 @@ description = "A REST API that provides historical snapshots of CoinGecko coin d
 
 [dependencies]
 domfi_util = { path = "../domfi_util" }
+domfi_domain = { path = "../domfi_domain" }
+domfi_ext_tcp = { path = "../domfi_ext_tcp" }
+domfi_ext_serde = { path = "../domfi_ext_serde" }
 
 actix-web = { version = "3", features = ["rust-tls"] }
 sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "runtime-tokio-rustls", "macros", "offline" ] }
+tokio = { version = "0.2", features = ["macros", "sync"] }
+qstring = "0.7.2"
 
 dotenv = "0.15.0"
 log = "0.4"
 pretty_env_logger = "0.4"
 listenfd = "0.3"
-net2 = "0.2"
 
 snafu = "0.6"
 futures = "0.3"
@@ -29,8 +33,11 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 base64 = "0.13"
 hex = "0.4"
+rpds = "0.8.0"
+lazy_static = "1.4.0"
+ttl_cache = "0.5.1"
 
 serde = "1.0"
 serde_json = { version = "1.0", features = ["raw_value"] }
-serde_with = { version = "1.5", features = ["hex"] }
+serde_with = { version = "1.6", features = ["hex"] }
 serde-tuple-vec-map = "1.0"

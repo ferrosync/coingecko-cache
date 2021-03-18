@@ -1,10 +1,11 @@
-use chrono::{DateTime, Utc, SubsecRound, Timelike, Duration, TimeZone};
-use sqlx::PgPool;
 use std::ops::Add;
-use sqlx::types::Uuid;
-use snafu::{Snafu, ResultExt};
-use sqlx::types::BigDecimal;
 use futures::prelude::*;
+use sqlx::PgPool;
+use sqlx::types::Uuid;
+use sqlx::types::BigDecimal;
+use chrono::{DateTime, Utc, SubsecRound, Timelike, Duration, TimeZone};
+use snafu::{Snafu, ResultExt};
+use domfi_domain::models::FinancialDominanceAsset;
 
 pub struct OriginMetadata {
     pub requested_timestamp_utc: DateTime<Utc>,
@@ -66,6 +67,18 @@ pub struct StorageBlob {
     pub sha256: Vec<u8>,
     pub data: Vec<u8>,
     pub mime: Option<String>,
+}
+
+pub struct FindByIdHistoryRow {
+    pub timestamp_utc_minutely: DateTime<Utc>,
+    pub timestamp_utc_exact: DateTime<Utc>,
+    pub provenance_uuid: Uuid,
+    pub dominance_percentage: BigDecimal,
+}
+
+pub struct FindByIdHistoryDataset {
+    pub asset: FinancialDominanceAsset,
+    pub rows: Vec<FindByIdHistoryRow>,
 }
 
 impl ObjectStorageRepo {
@@ -279,7 +292,7 @@ impl CoinDominanceRepo {
     }
 
     pub async fn find_by_id_at_timestamp_rounded(
-        id: &str,
+        asset: &FinancialDominanceAsset,
         ts: Option<DateTime<Utc>>,
         pool: &PgPool
     ) -> Result<PricingResult, RepositoryError> {
@@ -303,17 +316,11 @@ impl CoinDominanceRepo {
                     data.timestamp_utc = $1
                     and data.agent = $2
                     and data.coin_id = $3
-                order by
-                    -- note: force pushing the "others" to the bottom of the list
-                    case when ((data.coin_id <> '') is not true) then 1 else 0 end,
-
-                    -- then sort by market cap descending
-                    data.market_cap_usd desc
                 limit 1
                 "#,
                 timestamp_agent.timestamp.naive_utc(),
                 timestamp_agent.agent,
-                id)
+                asset.underlying().symbol().id())
                 .fetch_one(pool)
                 .await
                 .context(SqlError)?;
@@ -330,6 +337,47 @@ impl CoinDominanceRepo {
                 actual_timestamp_utc: actual_timestamp,
                 provenance_uuid: x.provenance_uuid,
             },
+        })
+    }
+
+    pub async fn find_by_id_history(
+        asset: &FinancialDominanceAsset,
+        pool: &PgPool
+    ) -> Result<FindByIdHistoryDataset, RepositoryError> {
+
+        let rows =
+            sqlx::query!(r#"
+                select distinct on (date_trunc('minute', timestamp_utc))
+                    date_trunc('minute', timestamp_utc) as timestamp_utc_minutely,
+                    timestamp_utc,
+                    provenance_uuid,
+                    market_dominance_percentage
+                from
+                    coin_dominance
+                where
+                    coin_id = $1
+                    and timestamp_utc >= now() at time zone 'utc' - '72 hours'::interval
+                    and timestamp_utc < date_trunc('minute', now() at time zone 'utc')
+                order by
+                    date_trunc('minute', timestamp_utc),
+                    timestamp_utc asc
+                "#,
+                asset.underlying().symbol().id())
+                .fetch_all(pool)
+                .await
+                .context(SqlError)?
+                .into_iter()
+                .map(|r| FindByIdHistoryRow {
+                    timestamp_utc_minutely: Utc.from_utc_datetime(&r.timestamp_utc_minutely.unwrap()),
+                    timestamp_utc_exact: Utc.from_utc_datetime(&r.timestamp_utc),
+                    provenance_uuid: r.provenance_uuid,
+                    dominance_percentage: r.market_dominance_percentage,
+                })
+                .collect();
+
+        Ok(FindByIdHistoryDataset {
+            asset: asset.clone(),
+            rows,
         })
     }
 }

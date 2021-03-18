@@ -1,10 +1,6 @@
+use domfi_domain::round_price_identifier;
 use crate::repo;
 use crate::api::models::{CoinDominanceElement, ProvenanceResponse, CoinDominanceMeta, PricesMeta};
-use bigdecimal::BigDecimal;
-
-pub fn round_price_identifier(value: &BigDecimal) -> BigDecimal {
-    value.round(2).with_scale(2)
-}
 
 impl From<repo::CoinDominanceRecord> for CoinDominanceElement {
     fn from(data: repo::CoinDominanceRecord) -> CoinDominanceElement {

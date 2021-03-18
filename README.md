@@ -29,7 +29,7 @@ The release binaries will be located in `target/x86_64-unknown-linux-musl/releas
 The two binaries require a Postgres instance (preferably Postgres 13, but Postgres 10 or above should work).
 
 A `docker-compose.yml` is provided which will automatically setup a Postgres 13
-instance and run `init.sql` to create the database schema for you. This
+instance and run `ch_tbl_coin_dominance.sql` to create the database schema for you. This
 requires that you have [Docker Compose installed](https://docs.docker.com/compose/install/).
 
 To create the database, within the project root directory, run:
@@ -37,7 +37,7 @@ To create the database, within the project root directory, run:
 docker-compose up
 ```
 
-Alternatively, simply run `init.sql` on Postgres >=10 database and update the
+Alternatively, simply run `ch_tbl_coin_dominance.sql` on Postgres >=10 database and update the
 `.env` file accordingly.
 
 ## License

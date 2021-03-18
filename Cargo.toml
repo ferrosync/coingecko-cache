@@ -2,5 +2,10 @@
 members = [
     "domfi_api",
     "domfi_loader",
+    "domfi_loader_historical",
     "domfi_util",
+    "domfi_data",
+    "domfi_domain",
+    "domfi_ext_tcp",
+    "domfi_ext_serde",
 ]

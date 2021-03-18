@@ -1,0 +1,27 @@
+[package]
+name = "domfi_loader_historical"
+version = "0.1.0"
+authors = ["Josh Bowden <josbow@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+domfi_util = { path = "../domfi_util" }
+domfi_data = { path = "../domfi_data" }
+domfi_ext_serde = { path = "../domfi_ext_serde", features = ["serde_deser_unquoted_bigdecimal"] }
+
+sqlx = { version = "0.4", default-features = false, features = [ "postgres", "json", "bigdecimal", "chrono", "uuid", "macros", "runtime-tokio-rustls", "offline" ] }
+tokio = { version = "0.2", features = ["full", "time"] }
+
+log = "0.4.11"
+snafu = "0.6.10"
+dotenv = "0.15.0"
+lazy_static = "1.4.0"
+
+bigdecimal = { version = "0.2", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+serde = "1"
+serde_json = "1"
+serde_with = "1"

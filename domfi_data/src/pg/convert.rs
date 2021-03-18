@@ -1,6 +1,6 @@
 use serde::Serialize;
 use reqwest::header::HeaderMap;
-use crate::db::models::{HeaderMapEntry, RequestMetadata, ResponseMetadata};
+use crate::pg::models::{HeaderMapEntry, RequestMetadata, ResponseMetadata};
 
 pub trait ToMetadata {
     type Output: Serialize;
